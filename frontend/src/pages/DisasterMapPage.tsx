@@ -352,26 +352,38 @@ export const DisasterMapPage: React.FC = () => {
         </div>
 
         {/* Right 1 Col: Nearby Ambulances & Hospitals Live List */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-col space-y-4 text-xs h-[580px] overflow-y-auto">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-col space-y-3.5 text-xs h-[580px] overflow-y-auto">
           {/* Header */}
-          <div className="border-b border-slate-800 pb-2">
-            <h3 className="font-bold text-slate-100 text-sm flex items-center">
-              <Radio className="w-4 h-4 text-cyan-400 mr-1.5 animate-pulse" /> Nearby Facility Telemetry
-            </h3>
-            <p className="text-[11px] text-slate-400">Ranked by proximity to your position</p>
+          <div className="border-b border-slate-800 pb-2.5 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-slate-100 text-sm flex items-center">
+                <Radio className="w-4 h-4 text-cyan-400 mr-1.5 animate-pulse" /> Nearby Facility Telemetry
+              </h3>
+              <p className="text-[11px] text-slate-400">Ranked by proximity to your live GPS position</p>
+            </div>
+            <button
+              onClick={handleUseLiveLocation}
+              disabled={isLocating}
+              title="Refresh Live Location and Facilities"
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 transition flex items-center justify-center"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+            </button>
           </div>
 
           {/* 1. Nearest Ambulances List */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
+              <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center">
                 <Truck className="w-3.5 h-3.5 text-emerald-400 mr-1" /> Nearby Ambulances ({nearbyAmbulances.length})
               </span>
-              <span className="text-[10px] text-emerald-400 font-semibold">Live GPS</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-semibold font-mono">
+                Live Proximity
+              </span>
             </div>
 
-            <div className="space-y-1.5">
-              {nearbyAmbulances.slice(0, 3).map((a, idx) => {
+            <div className="space-y-2">
+              {nearbyAmbulances.map((a, idx) => {
                 const isAvail = a.status === 'Available';
                 const isSelected = selectedAmbId === a.id;
                 return (
@@ -383,7 +395,7 @@ export const DisasterMapPage: React.FC = () => {
                     }}
                     className={`p-2.5 rounded-xl border cursor-pointer transition ${
                       isSelected
-                        ? 'bg-emerald-500/15 border-emerald-500/60 text-emerald-300'
+                        ? 'bg-emerald-500/15 border-emerald-500/60 text-emerald-300 shadow-md'
                         : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300'
                     }`}
                   >
@@ -392,18 +404,23 @@ export const DisasterMapPage: React.FC = () => {
                         <span className="w-4 h-4 rounded-full bg-slate-800 text-[10px] font-bold flex items-center justify-center text-cyan-400">
                           #{idx + 1}
                         </span>
-                        <span>{a.callsign}</span>
+                        <span className="font-bold">{a.callsign}</span>
                       </span>
-                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                         isAvail ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
                       }`}>
                         {a.status}
                       </span>
                     </div>
 
-                    <div className="flex justify-between text-[10px] text-slate-400 mt-1.5">
-                      <span>Distance: <strong className="text-slate-200">{a.distanceKm} km</strong></span>
-                      <span>ETA: <strong className="text-emerald-400">{a.etaMin} min</strong></span>
+                    <div className="flex justify-between text-[11px] text-slate-400 mt-1.5">
+                      <span>Distance: <strong className="text-slate-100">{a.distanceKm} km</strong></span>
+                      <span>ETA: <strong className="text-emerald-400 font-bold">{a.etaMin} min</strong></span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1 pt-1 border-t border-slate-900">
+                      <span>Unit: {a.unit_type || 'ALS'} Tier</span>
+                      <span className="text-cyan-400 font-medium">Click to Trace Route &rarr;</span>
                     </div>
                   </div>
                 );
@@ -414,14 +431,16 @@ export const DisasterMapPage: React.FC = () => {
           {/* 2. Nearest Hospitals List */}
           <div className="space-y-2 pt-2 border-t border-slate-800">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
+              <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center">
                 <HospIcon className="w-3.5 h-3.5 text-blue-400 mr-1" /> Nearby Hospitals ({nearbyHospitals.length})
               </span>
-              <span className="text-[10px] text-blue-400 font-semibold">HMIS Feed</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 font-semibold font-mono">
+                HMIS Live Beds
+              </span>
             </div>
 
-            <div className="space-y-1.5">
-              {nearbyHospitals.slice(0, 3).map((h, idx) => {
+            <div className="space-y-2">
+              {nearbyHospitals.map((h, idx) => {
                 const isSelected = selectedHospId === h.id;
                 return (
                   <div
@@ -432,7 +451,7 @@ export const DisasterMapPage: React.FC = () => {
                     }}
                     className={`p-2.5 rounded-xl border cursor-pointer transition ${
                       isSelected
-                        ? 'bg-blue-500/15 border-blue-500/60 text-blue-300'
+                        ? 'bg-blue-500/15 border-blue-500/60 text-blue-300 shadow-md'
                         : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300'
                     }`}
                   >
@@ -441,19 +460,24 @@ export const DisasterMapPage: React.FC = () => {
                         <span className="w-4 h-4 rounded-full bg-slate-800 text-[10px] font-bold flex items-center justify-center text-blue-400 flex-shrink-0">
                           #{idx + 1}
                         </span>
-                        <span className="truncate">{h.name.replace('Puri District Headquarters Hospital', 'DHH Puri')}</span>
+                        <span className="truncate font-bold">{h.name.replace('Puri District Headquarters Hospital', 'DHH Puri')}</span>
                       </span>
-                      <span className="text-emerald-400 font-mono text-[11px] flex-shrink-0 ml-1">
+                      <span className="text-emerald-400 font-mono text-[11px] font-bold flex-shrink-0 ml-1">
                         {h.freeBeds} Beds
                       </span>
                     </div>
 
-                    <div className="flex justify-between text-[10px] text-slate-400 mt-1.5">
-                      <span>Dist: <strong className="text-slate-200">{h.distanceKm} km</strong></span>
+                    <div className="flex justify-between text-[11px] text-slate-400 mt-1.5">
+                      <span>Dist: <strong className="text-slate-100">{h.distanceKm} km</strong></span>
                       <span>ICU: <strong className={h.free_icu_beds > 0 ? 'text-blue-400' : 'text-red-400'}>{h.free_icu_beds} Free</strong></span>
                       <span className={h.has_power ? 'text-emerald-400 font-semibold' : 'text-red-400 font-bold'}>
-                        {h.has_power ? 'Power OK' : 'Outage'}
+                        {h.has_power ? '⚡ Power OK' : '⚠ Outage'}
                       </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1 pt-1 border-t border-slate-900">
+                      <span className="truncate">{h.specialties?.slice(0, 2).join(', ') || 'Emergency Trauma'}</span>
+                      <span className="text-blue-400 font-medium">Select Hospital &rarr;</span>
                     </div>
                   </div>
                 );
