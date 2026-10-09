@@ -7,20 +7,7 @@ import {
   Compass, ArrowRight, RefreshCw, Send, Crosshair, Radio, Sparkles
 } from 'lucide-react';
 import { calculateRoute, assignIncident } from '../services/api';
-
-function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Number((R * c).toFixed(2));
-}
+import { fetchLiveNearbyHospitals, generateNearbyAmbulances, calculateDistanceKm } from '../services/liveFacilities';
 
 export const DisasterMapPage: React.FC = () => {
   const { state, setState } = useEmergencyStore();
@@ -48,58 +35,77 @@ export const DisasterMapPage: React.FC = () => {
     }
   }, [ambulances, hospitals, selectedAmbId, selectedHospId]);
 
-  // Handle Browser Live GPS Geolocation
+  // Handle Browser Live GPS Geolocation with Real-Time Hospital Feed
   const handleUseLiveLocation = () => {
     setIsLocating(true);
     setLocationStatusMessage('Acquiring high-accuracy GPS fix from browser...');
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
           setUserLiveLocation([lat, lon]);
-          setIsLocating(false);
-          setLocationStatusMessage(`Live GPS Locked: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`);
+          setLocationStatusMessage(`Live GPS Locked: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E — Syncing Live Hospitals...`);
 
-          // Auto-select the nearest available ambulance
-          const sortedAmbs = [...ambulances].sort((a, b) => {
-            const distA = calculateDistanceKm(lat, lon, a.location[1], a.location[0]);
-            const distB = calculateDistanceKm(lat, lon, b.location[1], b.location[0]);
-            return distA - distB;
-          });
-          const nearestAvail = sortedAmbs.find(a => a.status === 'Available') || sortedAmbs[0];
-          if (nearestAvail) setSelectedAmbId(nearestAvail.id);
+          try {
+            // Fetch real live hospitals around user's GPS coordinates
+            const liveHosps = await fetchLiveNearbyHospitals(lat, lon);
+            const liveAmbs = generateNearbyAmbulances(lat, lon);
 
-          // Auto-select the nearest hospital with beds
-          const sortedHosps = [...hospitals].sort((a, b) => {
-            const distA = calculateDistanceKm(lat, lon, a.location[1], a.location[0]);
-            const distB = calculateDistanceKm(lat, lon, b.location[1], b.location[0]);
-            return distA - distB;
-          });
-          if (sortedHosps[0]) setSelectedHospId(sortedHosps[0].id);
+            if (state) {
+              setState({
+                ...state,
+                hospitals: liveHosps,
+                ambulances: liveAmbs
+              });
+            }
 
-          // Calculate shortest route from nearest ambulance to user's live location
-          const originLoc = nearestAvail ? nearestAvail.location : undefined;
-          handleCalculateShortestRoute(originLoc, [lon, lat]);
+            // Auto-select the nearest available ambulance
+            const sortedAmbs = [...liveAmbs].sort((a, b) => {
+              const distA = calculateDistanceKm(lat, lon, a.location[1], a.location[0]);
+              const distB = calculateDistanceKm(lat, lon, b.location[1], b.location[0]);
+              return distA - distB;
+            });
+            const nearestAvail = sortedAmbs.find(a => a.status === 'Available') || sortedAmbs[0];
+            if (nearestAvail) setSelectedAmbId(nearestAvail.id);
+
+            // Auto-select the nearest hospital with beds
+            const sortedHosps = [...liveHosps].sort((a, b) => {
+              const distA = calculateDistanceKm(lat, lon, a.location[1], a.location[0]);
+              const distB = calculateDistanceKm(lat, lon, b.location[1], b.location[0]);
+              return distA - distB;
+            });
+            if (sortedHosps[0]) setSelectedHospId(sortedHosps[0].id);
+
+            setLocationStatusMessage(`Live GPS: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E — ${liveHosps.length} Hospitals & ${liveAmbs.length} Ambulances Located`);
+
+            // Calculate shortest route from nearest ambulance to user's live location
+            const originLoc = nearestAvail ? nearestAvail.location : undefined;
+            handleCalculateShortestRoute(originLoc, [lon, lat]);
+          } catch (err) {
+            console.error('Error updating live facilities:', err);
+          } finally {
+            setIsLocating(false);
+          }
         },
-        (error) => {
-          console.warn('Geolocation access error, falling back to Puri Central EOC:', error);
-          // Fallback location: Puri Coastal District Sector
+        async (error) => {
+          console.warn('Geolocation access error, using simulated sector coordinates:', error);
           const fallbackLat = 19.8050;
           const fallbackLon = 85.8280;
           setUserLiveLocation([fallbackLat, fallbackLon]);
-          setIsLocating(false);
-          setLocationStatusMessage('Live GPS simulated at Puri Coastal Command Sector (19.8050°N, 85.8280°E)');
           
-          const sortedAmbs = [...ambulances].sort((a, b) => {
-            const distA = calculateDistanceKm(fallbackLat, fallbackLon, a.location[1], a.location[0]);
-            const distB = calculateDistanceKm(fallbackLat, fallbackLon, b.location[1], b.location[0]);
-            return distA - distB;
-          });
-          const nearestAvail = sortedAmbs.find(a => a.status === 'Available') || sortedAmbs[0];
-          if (nearestAvail) setSelectedAmbId(nearestAvail.id);
-
-          handleCalculateShortestRoute(nearestAvail?.location, [fallbackLon, fallbackLat]);
+          const liveHosps = await fetchLiveNearbyHospitals(fallbackLat, fallbackLon);
+          const liveAmbs = generateNearbyAmbulances(fallbackLat, fallbackLon);
+          if (state) {
+            setState({
+              ...state,
+              hospitals: liveHosps,
+              ambulances: liveAmbs
+            });
+          }
+          setIsLocating(false);
+          setLocationStatusMessage('Live GPS simulated at Command Sector (19.8050°N, 85.8280°E)');
+          handleCalculateShortestRoute(liveAmbs[0]?.location, [fallbackLon, fallbackLat]);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
@@ -108,7 +114,7 @@ export const DisasterMapPage: React.FC = () => {
       const fallbackLon = 85.8280;
       setUserLiveLocation([fallbackLat, fallbackLon]);
       setIsLocating(false);
-      setLocationStatusMessage('Live location set to Puri Urban Sector (19.8050°N, 85.8280°E)');
+      setLocationStatusMessage('Live location set to Command Sector');
       handleCalculateShortestRoute(ambulances[0]?.location, [fallbackLon, fallbackLat]);
     }
   };

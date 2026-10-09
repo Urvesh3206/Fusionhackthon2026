@@ -16,20 +16,7 @@ import { QuickActionBar } from '../components/common/QuickActionBar';
 import { QuickStartGuideModal } from '../components/common/QuickStartGuideModal';
 import { ToastNotification } from '../components/common/ToastNotification';
 import { runOptimizationReplan, advanceScenarioStep, triggerRoadClosure } from '../services/api';
-
-function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Number((R * c).toFixed(2));
-}
+import { fetchLiveNearbyHospitals, generateNearbyAmbulances, calculateDistanceKm } from '../services/liveFacilities';
 
 const responseTimeData = [
   { time: 'T-48h', baseline: 24.5, resqgrid: 13.2 },
@@ -103,20 +90,45 @@ export const DashboardPage: React.FC = () => {
     setIsLocating(true);
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
           setUserLiveLocation([lat, lon]);
-          setIsLocating(false);
-          showToast(`📍 Live GPS Locked: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`);
+          showToast(`📍 Live GPS Locked: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E — Syncing Live Hospitals...`);
+          
+          try {
+            const liveHosps = await fetchLiveNearbyHospitals(lat, lon);
+            const liveAmbs = generateNearbyAmbulances(lat, lon);
+            if (state) {
+              setState({
+                ...state,
+                hospitals: liveHosps,
+                ambulances: liveAmbs
+              });
+            }
+            showToast(`📍 Found ${liveHosps.length} Real Hospitals & ${liveAmbs.length} Ambulances Near You!`);
+          } catch (e) {
+            console.error('Error fetching live facilities:', e);
+          } finally {
+            setIsLocating(false);
+          }
         },
-        (error) => {
+        async (error) => {
           console.warn('Geolocation fallback:', error);
           const fallbackLat = 19.8050;
           const fallbackLon = 85.8280;
           setUserLiveLocation([fallbackLat, fallbackLon]);
+          const liveHosps = await fetchLiveNearbyHospitals(fallbackLat, fallbackLon);
+          const liveAmbs = generateNearbyAmbulances(fallbackLat, fallbackLon);
+          if (state) {
+            setState({
+              ...state,
+              hospitals: liveHosps,
+              ambulances: liveAmbs
+            });
+          }
           setIsLocating(false);
-          showToast('📍 Live GPS Simulated at Puri Coastal Command Sector');
+          showToast('📍 Live GPS Simulated at Command Sector');
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
@@ -125,7 +137,7 @@ export const DashboardPage: React.FC = () => {
       const fallbackLon = 85.8280;
       setUserLiveLocation([fallbackLat, fallbackLon]);
       setIsLocating(false);
-      showToast('📍 Live GPS Simulated at Puri Coastal Sector');
+      showToast('📍 Live GPS Simulated at Command Sector');
     }
   };
 
