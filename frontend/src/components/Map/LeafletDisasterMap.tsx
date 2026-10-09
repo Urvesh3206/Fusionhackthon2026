@@ -7,24 +7,27 @@ import {
   Navigation, Truck, CheckCircle, Flame, Droplets, MapPin, Send
 } from 'lucide-react';
 
-// Custom SVG Icons
-function createCustomIcon(color: string, label: string, iconType: string, isPulsing: boolean = false) {
+// Google Maps Style SVG Icons
+function createHospitalIcon(isDerated: boolean = false) {
   const svg = `
-    <div class="${isPulsing ? 'critical-pin-pulse' : ''}" style="
-      background-color: ${color};
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid white;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-      color: white;
-      font-weight: bold;
-      font-size: 11px;
-    ">
-      ${iconType === 'amb' ? '🚑' : iconType === 'hosp' ? '🏥' : iconType === 'call' ? '🚨' : iconType === 'shelter' ? '⛺' : '📍'}
+    <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+      <div style="
+        background-color: ${isDerated ? '#dc2626' : '#ea4335'};
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2.5px solid #ffffff;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+        color: #ffffff;
+        font-weight: 900;
+        font-size: 15px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      ">
+        H
+      </div>
     </div>
   `;
   return L.divIcon({
@@ -36,14 +39,135 @@ function createCustomIcon(color: string, label: string, iconType: string, isPuls
   });
 }
 
-const ambIconAvail = createCustomIcon('#10b981', 'A', 'amb');
-const ambIconBusy = createCustomIcon('#f59e0b', 'B', 'amb');
-const hospIconNormal = createCustomIcon('#3b82f6', 'H', 'hosp');
-const hospIconDerated = createCustomIcon('#ef4444', 'H!', 'hosp');
-const callIconCrit = createCustomIcon('#dc2626', 'P1', 'call', true);
-const callIconUrgent = createCustomIcon('#f97316', 'P2', 'call');
-const shelterIcon = createCustomIcon('#8b5cf6', 'S', 'shelter');
-const customClickIcon = createCustomIcon('#06b6d4', 'YOU', 'pin', true);
+function createAmbulanceIcon(isAvailable: boolean = true) {
+  const svg = `
+    <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+      <div style="
+        background-color: ${isAvailable ? '#059669' : '#d97706'};
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2.5px solid #ffffff;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+        font-size: 16px;
+      ">
+        🚑
+      </div>
+    </div>
+  `;
+  return L.divIcon({
+    html: svg,
+    className: 'custom-leaflet-pin',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -18]
+  });
+}
+
+function createLiveGpsUserIcon() {
+  const svg = `
+    <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+      <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(26, 115, 232, 0.35); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+      <div style="width: 18px; height: 18px; border-radius: 50%; background: #1a73e8; border: 3px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.5); z-index: 10;"></div>
+    </div>
+  `;
+  return L.divIcon({
+    html: svg,
+    className: 'custom-leaflet-pin',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -18]
+  });
+}
+
+function createIncidentIcon(isCrit: boolean = true) {
+  const svg = `
+    <div style="
+      background-color: ${isCrit ? '#dc2626' : '#ea580c'};
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 3px 10px rgba(220, 38, 38, 0.6);
+      font-size: 15px;
+    ">
+      🚨
+    </div>
+  `;
+  return L.divIcon({
+    html: svg,
+    className: 'custom-leaflet-pin critical-pin-pulse',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -18]
+  });
+}
+
+function createShelterIcon() {
+  const svg = `
+    <div style="
+      background-color: #7c3aed;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #ffffff;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+      font-size: 14px;
+    ">
+      ⛺
+    </div>
+  `;
+  return L.divIcon({
+    html: svg,
+    className: 'custom-leaflet-pin',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -18]
+  });
+}
+
+const hospIconNormal = createHospitalIcon(false);
+const hospIconDerated = createHospitalIcon(true);
+const ambIconAvail = createAmbulanceIcon(true);
+const ambIconBusy = createAmbulanceIcon(false);
+const callIconCrit = createIncidentIcon(true);
+const callIconUrgent = createIncidentIcon(false);
+const shelterIcon = createShelterIcon();
+const customClickIcon = createLiveGpsUserIcon();
+
+export type BasemapType = 'street' | 'osm' | 'satellite' | 'dark';
+
+const BASEMAP_PROVIDERS: Record<BasemapType, { name: string; url: string; attribution: string }> = {
+  street: {
+    name: '🗺️ Street Map',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, OpenStreetMap'
+  },
+  osm: {
+    name: '🌐 OpenStreetMap',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  },
+  satellite: {
+    name: '🛰️ Satellite Hybrid',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar'
+  },
+  dark: {
+    name: '🌙 Dark Mode',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a> & OpenStreetMap'
+  }
+};
 
 interface DisasterMapProps {
   state: FullSystemState | null;
@@ -119,6 +243,7 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
   onRouteBetween
 }) => {
   const defaultCenter: [number, number] = [19.8135, 85.8312]; // Puri District Coordinates [lat, lon]
+  const [basemap, setBasemap] = useState<BasemapType>('street');
   const [activeLayers, setActiveLayers] = useState({
     hazards: true,
     ambulances: true,
@@ -144,8 +269,9 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
           <span>Synchronizing Telemetry Grid...</span>
         </div>
       )}
+      
       {/* Top Map Layer Control Bar */}
-      <div className="absolute top-3 left-3 z-[1000] bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-700/70 shadow-lg text-xs flex flex-wrap gap-2 text-slate-200">
+      <div className="absolute top-3 left-3 z-[1000] bg-slate-900/95 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-700/80 shadow-xl text-xs flex flex-wrap gap-2 text-slate-200">
         <span className="font-semibold text-slate-400 flex items-center mr-1">
           <Shield className="w-3.5 h-3.5 mr-1 text-cyan-400" /> Layers:
         </span>
@@ -156,7 +282,7 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
             onChange={(e) => setActiveLayers(prev => ({ ...prev, hazards: e.target.checked }))}
             className="rounded bg-slate-800 text-cyan-500 border-slate-700"
           />
-          <span className="text-amber-400">Hazards & Surge</span>
+          <span className="text-amber-400 font-medium">Hazards & Surge</span>
         </label>
         <label className="flex items-center space-x-1 cursor-pointer">
           <input
@@ -165,7 +291,7 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
             onChange={(e) => setActiveLayers(prev => ({ ...prev, incidents: e.target.checked }))}
             className="rounded bg-slate-800 text-red-500 border-slate-700"
           />
-          <span className="text-red-400">Incidents ({emergency_calls.length})</span>
+          <span className="text-red-400 font-medium">Incidents ({emergency_calls.length})</span>
         </label>
         <label className="flex items-center space-x-1 cursor-pointer">
           <input
@@ -174,7 +300,7 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
             onChange={(e) => setActiveLayers(prev => ({ ...prev, ambulances: e.target.checked }))}
             className="rounded bg-slate-800 text-emerald-500 border-slate-700"
           />
-          <span className="text-emerald-400">Fleet ({ambulances.length})</span>
+          <span className="text-emerald-400 font-medium">Fleet ({ambulances.length})</span>
         </label>
         <label className="flex items-center space-x-1 cursor-pointer">
           <input
@@ -183,7 +309,7 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
             onChange={(e) => setActiveLayers(prev => ({ ...prev, hospitals: e.target.checked }))}
             className="rounded bg-slate-800 text-blue-500 border-slate-700"
           />
-          <span className="text-blue-400">Hospitals ({hospitals.length})</span>
+          <span className="text-rose-400 font-medium">Hospitals ({hospitals.length})</span>
         </label>
         <label className="flex items-center space-x-1 cursor-pointer">
           <input
@@ -192,7 +318,7 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
             onChange={(e) => setActiveLayers(prev => ({ ...prev, shelters: e.target.checked }))}
             className="rounded bg-slate-800 text-purple-500 border-slate-700"
           />
-          <span className="text-purple-400">Shelters ({shelters.length})</span>
+          <span className="text-purple-400 font-medium">Shelters ({shelters.length})</span>
         </label>
         <label className="flex items-center space-x-1 cursor-pointer">
           <input
@@ -201,31 +327,49 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
             onChange={(e) => setActiveLayers(prev => ({ ...prev, closures: e.target.checked }))}
             className="rounded bg-slate-800 text-rose-500 border-slate-700"
           />
-          <span className="text-rose-400">Closed Roads ({road_edges.filter(e => e.is_closed).length})</span>
+          <span className="text-rose-400 font-medium">Closed Roads ({road_edges.filter(e => e.is_closed).length})</span>
         </label>
+      </div>
+
+      {/* Top Right Basemap Style Switcher (Google Street Map, OSM, Satellite, Dark) */}
+      <div className="absolute top-3 right-3 z-[1000] bg-slate-900/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-700/80 shadow-xl text-xs flex items-center space-x-1.5">
+        {(['street', 'osm', 'satellite', 'dark'] as BasemapType[]).map((type) => (
+          <button
+            key={type}
+            onClick={() => setBasemap(type)}
+            className={`px-2.5 py-1 rounded-lg font-semibold text-[11px] transition ${
+              basemap === type
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            {BASEMAP_PROVIDERS[type].name}
+          </button>
+        ))}
       </div>
 
       <MapContainer
         center={defaultCenter}
-        zoom={11}
+        zoom={12}
         scrollWheelZoom={true}
         style={{ width: '100%', height: '100%' }}
         className="z-0"
       >
         <MapViewController 
           center={defaultCenter} 
-          zoom={11} 
+          zoom={12} 
           clickedPoint={clickedPoint} 
           selectedRoute={selectedRoute} 
         />
         <MapResizer />
         <MapClickHandler onMapClick={onMapClick} />
         
-        {/* Free Dark Canvas Basemap (Zero API key required) */}
+        {/* Vibrant High-Detail Map Tiles (Default: Google Maps style Street Map) */}
         <TileLayer
-          attribution='&copy; <a href="https://www.esri.com/">Esri</a> & OpenStreetMap contributors'
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-          maxZoom={16}
+          key={basemap}
+          attribution={BASEMAP_PROVIDERS[basemap].attribution}
+          url={BASEMAP_PROVIDERS[basemap].url}
+          maxZoom={19}
         />
 
         {/* 1. Road Network & Inundation Closures */}
