@@ -12,6 +12,9 @@ import {
 } from 'recharts';
 import { useEmergencyStore } from '../stores/useEmergencyStore';
 import { LeafletDisasterMap } from '../components/Map/LeafletDisasterMap';
+import { QuickActionBar } from '../components/common/QuickActionBar';
+import { QuickStartGuideModal } from '../components/common/QuickStartGuideModal';
+import { ToastNotification } from '../components/common/ToastNotification';
 import { runOptimizationReplan, advanceScenarioStep, triggerRoadClosure } from '../services/api';
 
 const responseTimeData = [
@@ -27,6 +30,8 @@ export const DashboardPage: React.FC = () => {
   const { state, plan, setPlan, setState } = useEmergencyStore();
   const [replanLoading, setReplanLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date().toUTCString().slice(17, 25));
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -34,6 +39,11 @@ export const DashboardPage: React.FC = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 5000);
+  };
 
   const activeIncidents = state?.emergency_calls.filter(c => c.status !== 'Resolved') || [];
   const criticalCalls = activeIncidents.filter(c => c.priority.includes('Critical') || c.priority.includes('P1'));
@@ -132,7 +142,10 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Glassmorphic Creative KPI Metric Cards */}
+      {/* 2. Interactive 1-Click Action & Testing Bar */}
+      <QuickActionBar onOpenGuide={() => setIsGuideOpen(true)} onShowToast={showToast} />
+
+      {/* 3. Glassmorphic Creative KPI Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
         {/* Active Emergency Calls */}
         <div className="glass-card p-4 rounded-2xl border border-slate-800/80 hover:border-red-500/40 transition-all shadow-xl relative overflow-hidden group">
@@ -389,6 +402,18 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Interactive Quick-Start Tour Modal */}
+      <QuickStartGuideModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+      />
+
+      {/* Floating Toast Notification */}
+      <ToastNotification
+        message={toastMessage}
+        onClose={() => setToastMessage(null)}
+      />
     </div>
   );
 };
