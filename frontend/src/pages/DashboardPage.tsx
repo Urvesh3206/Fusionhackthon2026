@@ -4,7 +4,7 @@ import {
   AlertTriangle, Truck, Hospital, Activity, Flame, 
   Send, Users, Shield, ArrowUpRight, TrendingUp, CheckCircle2,
   Clock, PlusCircle, RefreshCw, Zap, Wind, Droplets, Radio,
-  Sparkles, Compass, AlertCircle, PlaySquare, ChevronRight
+  Sparkles, Compass, AlertCircle, PlaySquare, ChevronRight, Crosshair, MapPin
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, 
@@ -16,6 +16,20 @@ import { QuickActionBar } from '../components/common/QuickActionBar';
 import { QuickStartGuideModal } from '../components/common/QuickStartGuideModal';
 import { ToastNotification } from '../components/common/ToastNotification';
 import { runOptimizationReplan, advanceScenarioStep, triggerRoadClosure } from '../services/api';
+
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(2));
+}
 
 const responseTimeData = [
   { time: 'T-48h', baseline: 24.5, resqgrid: 13.2 },
@@ -32,6 +46,8 @@ export const DashboardPage: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date().toUTCString().slice(17, 25));
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [userLiveLocation, setUserLiveLocation] = useState<[number, number] | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -82,6 +98,51 @@ export const DashboardPage: React.FC = () => {
       console.error(e);
     }
   };
+
+  const handleUseLiveLocation = () => {
+    setIsLocating(true);
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setUserLiveLocation([lat, lon]);
+          setIsLocating(false);
+          showToast(`📍 Live GPS Locked: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`);
+        },
+        (error) => {
+          console.warn('Geolocation fallback:', error);
+          const fallbackLat = 19.8050;
+          const fallbackLon = 85.8280;
+          setUserLiveLocation([fallbackLat, fallbackLon]);
+          setIsLocating(false);
+          showToast('📍 Live GPS Simulated at Puri Coastal Command Sector');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      const fallbackLat = 19.8050;
+      const fallbackLon = 85.8280;
+      setUserLiveLocation([fallbackLat, fallbackLon]);
+      setIsLocating(false);
+      showToast('📍 Live GPS Simulated at Puri Coastal Sector');
+    }
+  };
+
+  const refLat = userLiveLocation ? userLiveLocation[0] : 19.8135;
+  const refLon = userLiveLocation ? userLiveLocation[1] : 85.8312;
+
+  const nearestAmbulance = state?.ambulances ? [...state.ambulances].map(a => {
+    const dist = calculateDistanceKm(refLat, refLon, a.location[1], a.location[0]);
+    const estEta = Number((dist / 0.6).toFixed(1));
+    return { ...a, dist, estEta };
+  }).sort((a, b) => a.dist - b.dist)[0] : null;
+
+  const nearestHospital = state?.hospitals ? [...state.hospitals].map(h => {
+    const dist = calculateDistanceKm(refLat, refLon, h.location[1], h.location[0]);
+    const freeBeds = Math.max(0, h.usable_beds - h.occupied_beds);
+    return { ...h, dist, freeBeds };
+  }).sort((a, b) => a.dist - b.dist)[0] : null;
 
   return (
     <div className="space-y-5">
@@ -266,21 +327,53 @@ export const DashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Tactical Leaflet Map with HUD Overlay */}
         <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-col space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
               <Compass className="w-4 h-4 text-cyan-400" />
               <h2 className="text-sm font-bold text-slate-100">Tactical Geospatial Grid — Puri Coastal Sector</h2>
             </div>
-            <button
-              onClick={() => navigate('/map')}
-              className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center font-semibold"
-            >
-              Fullscreen Map <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleUseLiveLocation}
+                disabled={isLocating}
+                className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center space-x-1.5 transition"
+              >
+                <Crosshair className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : 'animate-pulse'}`} />
+                <span>{isLocating ? 'Acquiring...' : '📍 Use My Live GPS'}</span>
+              </button>
+              <button
+                onClick={() => navigate('/map')}
+                className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl text-cyan-400 hover:text-cyan-300 flex items-center font-semibold transition"
+              >
+                Fullscreen Map <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
+              </button>
+            </div>
           </div>
 
+          {/* Quick GPS telemetry snippet banner if active */}
+          {userLiveLocation && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-2.5 flex flex-wrap items-center justify-between text-xs text-emerald-300 gap-2">
+              <div className="flex items-center space-x-2">
+                <MapPin className="w-4 h-4 text-emerald-400" />
+                <span>GPS Pin: <strong>{userLiveLocation[0].toFixed(4)}°N, {userLiveLocation[1].toFixed(4)}°E</strong></span>
+                <span>&bull; Nearest Amb: <strong className="text-white">{nearestAmbulance?.callsign}</strong> ({nearestAmbulance?.dist} km, ETA {nearestAmbulance?.estEta}m)</span>
+                <span>&bull; Nearest Hosp: <strong className="text-white">{nearestHospital?.name?.split(' ')[0]}</strong> ({nearestHospital?.dist} km, {nearestHospital?.freeBeds} Beds)</span>
+              </div>
+              <button
+                onClick={() => navigate('/map')}
+                className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 underline"
+              >
+                Open Route Navigator &rarr;
+              </button>
+            </div>
+          )}
+
           <div className="h-[440px] w-full rounded-xl overflow-hidden relative">
-            <LeafletDisasterMap state={state} onSelectIncident={() => navigate('/dispatch')} />
+            <LeafletDisasterMap 
+              state={state} 
+              clickedPoint={userLiveLocation}
+              onSelectIncident={() => navigate('/dispatch')} 
+            />
           </div>
         </div>
 
