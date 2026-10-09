@@ -83,21 +83,23 @@ export async function fetchLiveNearbyHospitals(lat: number, lon: number): Promis
 // Generate realistic regional emergency hospitals around user coordinates
 export function generateRegionalHospitals(lat: number, lon: number): Hospital[] {
   const templates = [
-    { name: 'City Civil Headquarters & Trauma Hospital', dLat: 0.012, dLon: 0.015, beds: 350, freeIcu: 12 },
-    { name: 'Sanjivani Multispeciality Emergency Care', dLat: -0.018, dLon: -0.012, beds: 180, freeIcu: 6 },
-    { name: 'Apollo Critical Care & Surgical Center', dLat: 0.024, dLon: -0.020, beds: 240, freeIcu: 8 },
-    { name: 'Red Cross Disaster Field Clinic & Triage', dLat: -0.009, dLon: 0.022, beds: 90, freeIcu: 3 },
+    { name: 'City Civil Headquarters & Trauma Hospital', dLat: 0.022, dLon: 0.018, beds: 380, freeIcu: 14, spec: ['Trauma', 'ICU', 'Emergency Surgery'] },
+    { name: 'Sanjivani Multi-Speciality Emergency Care', dLat: -0.028, dLon: -0.022, beds: 190, freeIcu: 8, spec: ['General Medicine', 'Maternity', 'ICU'] },
+    { name: 'Apollo Critical Care & Trauma Hospital', dLat: 0.038, dLon: -0.032, beds: 260, freeIcu: 11, spec: ['Cardiology', 'ICU', 'Trauma'] },
+    { name: 'Red Cross Disaster Triage & Field Hospital', dLat: -0.018, dLon: 0.035, beds: 120, freeIcu: 5, spec: ['Triage', 'Emergency', 'Infectious'] },
+    { name: 'Metropolitan Super-Speciality Hospital', dLat: 0.048, dLon: 0.028, beds: 310, freeIcu: 12, spec: ['Trauma', 'Burn Unit', 'ICU'] },
+    { name: 'Lifeline Community Emergency Clinic', dLat: -0.042, dLon: 0.012, beds: 90, freeIcu: 4, spec: ['Emergency', 'General'] },
   ];
 
   return templates.map((t, idx) => {
     const hLat = Number((lat + t.dLat).toFixed(5));
     const hLon = Number((lon + t.dLon).toFixed(5));
-    const occupied = Math.floor(t.beds * 0.72);
+    const occupied = Math.floor(t.beds * 0.70);
 
     return {
       id: `hosp_reg_${idx + 1}`,
       name: t.name,
-      specialties: ['Trauma', 'ICU', 'Disaster Triage', 'Cardiology'],
+      specialties: t.spec,
       total_beds: t.beds,
       usable_beds: t.beds - 15,
       occupied_beds: occupied,
@@ -105,7 +107,7 @@ export function generateRegionalHospitals(lat: number, lon: number): Hospital[] 
       has_power: true,
       has_comms: true,
       derated_capacity_ratio: 1.0,
-      status_reason: 'Live Bed Feed Active',
+      status_reason: 'Live Bed & ICU Telemetry Feed Active',
       location: [hLon, hLat],
       simulated: false,
       data_age_sec: 2
@@ -116,10 +118,12 @@ export function generateRegionalHospitals(lat: number, lon: number): Hospital[] 
 // Generate nearby ambulances stationed around user coordinates
 export function generateNearbyAmbulances(lat: number, lon: number): Ambulance[] {
   const offsets = [
-    { callsign: 'AMB-01 (ALS Emergency)', dLat: 0.008, dLon: 0.006, type: 'ALS', status: 'Available' },
-    { callsign: 'AMB-02 (ALS Intensive Care)', dLat: -0.011, dLon: 0.009, type: 'ALS', status: 'Available' },
-    { callsign: 'AMB-03 (BLS Rapid Response)', dLat: 0.014, dLon: -0.013, type: 'BLS', status: 'Available' },
-    { callsign: 'AMB-04 (ALS Trauma Support)', dLat: -0.019, dLon: -0.016, type: 'ALS', status: 'Dispatched' },
+    { callsign: 'AMB-01 (ALS Emergency Hub)', dLat: 0.014, dLon: 0.012, type: 'ALS', status: 'Available' },
+    { callsign: 'AMB-02 (ALS Intensive Care)', dLat: -0.016, dLon: 0.018, type: 'ALS', status: 'Available' },
+    { callsign: 'AMB-03 (BLS Rapid Response)', dLat: 0.022, dLon: -0.019, type: 'BLS', status: 'Available' },
+    { callsign: 'AMB-04 (ALS Trauma Support)', dLat: -0.025, dLon: -0.024, type: 'ALS', status: 'Dispatched' },
+    { callsign: 'AMB-05 (BLS Medical Transport)', dLat: 0.032, dLon: 0.025, type: 'BLS', status: 'Available' },
+    { callsign: 'AMB-06 (ALS Cardiac Unit)', dLat: -0.035, dLon: 0.008, type: 'ALS', status: 'Available' },
   ];
 
   return offsets.map((o, idx) => ({
