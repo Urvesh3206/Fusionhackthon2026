@@ -101,12 +101,86 @@ interface EmergencyStore {
   setOverrides: (logs: OverrideLogEntry[]) => void;
 }
 
+export const DEFAULT_FALLBACK_STATE: FullSystemState = {
+  scenario_id: 'cyclone_fani_puri',
+  active_step_id: 'step_0',
+  step_index: 0,
+  total_steps: 5,
+  simulation_time_label: 'T-48h Pre-Landfall Warning',
+  forecast: {
+    scenario_id: 'cyclone_fani_puri',
+    step_id: 'step_0',
+    hazard_type: 'cyclone',
+    wind_speed_kmh: 125,
+    rain_rate_mmh: 45,
+    river_discharge_m3s: 920,
+    apparent_temp_c: 34,
+    wet_bulb_temp_c: 29,
+    summary_text: 'Cyclone Fani Category-4 storm system tracking towards Puri District coastline.',
+    cone_polygon: [
+      [85.78, 19.75],
+      [85.88, 19.78],
+      [85.92, 19.88],
+      [85.82, 19.92],
+      [85.75, 19.84],
+      [85.78, 19.75]
+    ]
+  },
+  ambulances: [
+    { id: 'amb_01', callsign: 'AMB-01 (ALS)', unit_type: 'ALS', status: 'Available', station_id: 'st_puri_central', location: [85.8312, 19.8135], assigned_call_id: null, target_destination: null, simulated: true, data_age_sec: 12 },
+    { id: 'amb_02', callsign: 'AMB-02 (ALS)', unit_type: 'ALS', status: 'Available', station_id: 'st_puri_south', location: [85.8150, 19.8050], assigned_call_id: null, target_destination: null, simulated: true, data_age_sec: 8 },
+    { id: 'amb_03', callsign: 'AMB-03 (BLS)', unit_type: 'BLS', status: 'Available', station_id: 'st_puri_north', location: [85.8450, 19.8250], assigned_call_id: null, target_destination: null, simulated: true, data_age_sec: 15 },
+    { id: 'amb_04', callsign: 'AMB-04 (ALS)', unit_type: 'ALS', status: 'Dispatched', station_id: 'st_brahmagiri', location: [85.7900, 19.7850], assigned_call_id: null, target_destination: null, simulated: true, data_age_sec: 5 },
+    { id: 'amb_05', callsign: 'AMB-05 (BLS)', unit_type: 'BLS', status: 'Available', station_id: 'st_gop', location: [85.8600, 19.8350], assigned_call_id: null, target_destination: null, simulated: true, data_age_sec: 20 },
+    { id: 'amb_06', callsign: 'AMB-06 (ALS)', unit_type: 'ALS', status: 'Available', station_id: 'st_konark', location: [85.8200, 19.8200], assigned_call_id: null, target_destination: null, simulated: true, data_age_sec: 10 },
+  ],
+  hospitals: [
+    { id: 'hosp_dhh_puri', name: 'Puri District Headquarters Hospital', specialties: ['Trauma', 'ICU', 'Pediatric', 'Infectious'], total_beds: 300, usable_beds: 280, occupied_beds: 238, free_icu_beds: 8, has_power: true, has_comms: true, derated_capacity_ratio: 1.0, status_reason: 'Operating under normal emergency diesel backup', location: [85.8315, 19.8150], simulated: true, data_age_sec: 10 },
+    { id: 'hosp_coastal_id', name: 'Coastal Infectious Disease Hospital', specialties: ['Infectious', 'General Medicine'], total_beds: 120, usable_beds: 110, occupied_beds: 82, free_icu_beds: 4, has_power: true, has_comms: true, derated_capacity_ratio: 1.0, status_reason: 'Operational', location: [85.8420, 19.7980], simulated: true, data_age_sec: 15 },
+    { id: 'hosp_chc_brahmagiri', name: 'Community Health Centre Brahmagiri', specialties: ['Emergency Triage', 'Maternity'], total_beds: 60, usable_beds: 50, occupied_beds: 41, free_icu_beds: 1, has_power: true, has_comms: true, derated_capacity_ratio: 1.0, status_reason: 'Operational', location: [85.7500, 19.8000], simulated: true, data_age_sec: 12 },
+    { id: 'hosp_chc_gop', name: 'Community Health Centre Gop', specialties: ['Emergency Triage', 'General Medicine'], total_beds: 80, usable_beds: 75, occupied_beds: 52, free_icu_beds: 3, has_power: true, has_comms: true, derated_capacity_ratio: 1.0, status_reason: 'Operational', location: [86.0050, 19.9950], simulated: true, data_age_sec: 8 },
+  ],
+  emergency_calls: [
+    { id: 'call_101', timestamp: new Date().toISOString(), priority: 'P1 - Critical', patient_condition: 'Crush Injury & Severe Respiratory Distress', required_specialty: 'Trauma', location: [85.8240, 19.8080], district_zone: 'Puri South Coast', status: 'Pending', simulated: true },
+    { id: 'call_102', timestamp: new Date().toISOString(), priority: 'P2 - Urgent', patient_condition: 'Compound Fracture / Flood Debris', required_specialty: 'Orthopedics', location: [85.8400, 19.8210], district_zone: 'Puri Urban East', status: 'Pending', simulated: true },
+    { id: 'call_103', timestamp: new Date().toISOString(), priority: 'P1 - Critical', patient_condition: 'Cardiac Arrest / Inundated Building', required_specialty: 'ICU', location: [85.8110, 19.8010], district_zone: 'Chakratirtha Sector', status: 'Pending', simulated: true },
+  ],
+  shelters: [
+    { id: 'shelter_puri_town', name: 'Puri Town Multi-Purpose Cyclone Shelter', capacity: 1500, current_occupancy: 920, location: [85.8290, 19.8110], is_accessible: true, simulated: true },
+    { id: 'shelter_brahmagiri', name: 'Brahmagiri High School Disaster Center', capacity: 800, current_occupancy: 450, location: [85.7480, 19.8020], is_accessible: true, simulated: true },
+    { id: 'shelter_konark', name: 'Konark Coastal Cyclone Shelter', capacity: 1200, current_occupancy: 610, location: [86.0900, 19.8900], is_accessible: true, simulated: true },
+  ],
+  temporary_resources: [],
+  road_edges: [
+    { id: 'edge_nh316_puri', name: 'NH-316 Puri Bypass Arterial', source_node: 'n_nh316_1', target_node: 'n_nh316_2', length_m: 4800, speed_kmh: 45, base_travel_time_sec: 384, elevation_m: 4.5, river_distance_m: 1200, failure_prob: 0.12, is_closed: false, closure_reason: null, geometry: [[85.8200, 19.8100], [85.8300, 19.8150], [85.8450, 19.8250]], simulated: true, data_age_sec: 5 },
+    { id: 'edge_grand_road', name: 'Grand Road Bada Danda Corridor', source_node: 'n_grand_1', target_node: 'n_grand_2', length_m: 2400, speed_kmh: 30, base_travel_time_sec: 288, elevation_m: 5.2, river_distance_m: 2400, failure_prob: 0.08, is_closed: false, closure_reason: null, geometry: [[85.8310, 19.8050], [85.8315, 19.8150], [85.8320, 19.8220]], simulated: true, data_age_sec: 10 },
+    { id: 'edge_marine_drive', name: 'Marine Drive Coastal Causeway', source_node: 'n_marine_1', target_node: 'n_marine_2', length_m: 6200, speed_kmh: 10, base_travel_time_sec: 2232, elevation_m: 1.2, river_distance_m: 300, failure_prob: 0.78, is_closed: true, closure_reason: 'Sea surge breached coastal sea wall by +1.4m', geometry: [[85.8450, 19.7980], [85.8600, 19.8050], [85.8800, 19.8180]], simulated: true, data_age_sec: 3 },
+  ],
+  risk_grid: [],
+  staged_stations: [
+    { id: 'st_puri_central', name: 'Puri Central Station', location: [85.8312, 19.8135], assigned_units: 3 },
+    { id: 'st_brahmagiri', name: 'Brahmagiri Outpost', location: [85.7500, 19.8000], assigned_units: 2 },
+  ],
+  active_road_closures: ['edge_marine_drive'],
+  system_metrics: {
+    total_ambulances: 6,
+    available_ambulances: 5,
+    total_hospital_beds: 560,
+    free_icu_beds: 16,
+    derated_hospitals_count: 0,
+    closed_edges_count: 1,
+    pending_calls_count: 3
+  },
+  offline_mode: false,
+  last_updated: new Date().toISOString()
+};
+
 export const useEmergencyStore = create<EmergencyStore>((set) => ({
   currentUser: DEMO_USER_PROFILES.admin,
-  state: null,
+  state: DEFAULT_FALLBACK_STATE,
   plan: null,
   overrides: [],
-  isConnected: false,
+  isConnected: true,
   isLoading: false,
   activeScenarioId: 'cyclone_fani_puri',
   activeStepIndex: 0,

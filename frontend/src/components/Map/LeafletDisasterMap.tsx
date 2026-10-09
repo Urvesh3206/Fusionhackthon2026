@@ -95,6 +95,18 @@ function MapClickHandler({ onMapClick }: { onMapClick?: (lat: number, lon: numbe
   return null;
 }
 
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
+
 export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
   state,
   selectedRoute,
@@ -116,20 +128,22 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
     closures: true,
   });
 
-  if (!state) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-400">
-        <div className="flex items-center space-x-2 text-xs">
-          <span>Loading Spatial Telemetry Grid...</span>
-        </div>
-      </div>
-    );
-  }
-
-  const { ambulances, hospitals, emergency_calls, shelters, road_edges, forecast } = state;
+  const ambulances = state?.ambulances || [];
+  const hospitals = state?.hospitals || [];
+  const emergency_calls = state?.emergency_calls || [];
+  const shelters = state?.shelters || [];
+  const road_edges = state?.road_edges || [];
+  const forecast = state?.forecast || null;
 
   return (
-    <div className="relative w-full h-full min-h-[480px] rounded-xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-950">
+    <div className="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-950">
+      {/* Telemetry Status Indicator Pill if state is still loading */}
+      {!state && (
+        <div className="absolute top-14 right-3 z-[1000] bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-amber-500/40 text-amber-300 text-xs shadow-lg flex items-center space-x-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          <span>Synchronizing Telemetry Grid...</span>
+        </div>
+      )}
       {/* Top Map Layer Control Bar */}
       <div className="absolute top-3 left-3 z-[1000] bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-700/70 shadow-lg text-xs flex flex-wrap gap-2 text-slate-200">
         <span className="font-semibold text-slate-400 flex items-center mr-1">
@@ -204,6 +218,7 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
           clickedPoint={clickedPoint} 
           selectedRoute={selectedRoute} 
         />
+        <MapResizer />
         <MapClickHandler onMapClick={onMapClick} />
         
         {/* Free Dark Canvas Basemap (Zero API key required) */}
@@ -215,8 +230,11 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
 
         {/* 1. Road Network & Inundation Closures */}
         {road_edges.map((edge) => {
-          if (!edge.geometry || edge.geometry.length < 2) return null;
-          const latLngs: [number, number][] = edge.geometry.map(pt => [pt[1], pt[0]]);
+          if (!edge || !Array.isArray(edge.geometry) || edge.geometry.length < 2) return null;
+          const latLngs: [number, number][] = edge.geometry
+            .filter(pt => Array.isArray(pt) && pt.length >= 2 && !isNaN(pt[0]) && !isNaN(pt[1]))
+            .map(pt => [pt[1], pt[0]]);
+          if (latLngs.length < 2) return null;
           const isClosed = edge.is_closed || edge.failure_prob >= 0.50;
           
           if (isClosed && activeLayers.closures) {
@@ -248,9 +266,11 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
         })}
 
         {/* 2. Selected Shortest / Safest Route with Animated Glowing Polyline */}
-        {selectedRoute && selectedRoute.length > 1 && (
+        {selectedRoute && Array.isArray(selectedRoute) && selectedRoute.length > 1 && (
           <Polyline
-            positions={selectedRoute.map(pt => [pt[1], pt[0]])}
+            positions={selectedRoute
+              .filter(pt => Array.isArray(pt) && pt.length >= 2 && !isNaN(pt[0]) && !isNaN(pt[1]))
+              .map(pt => [pt[1], pt[0]])}
             pathOptions={{
               color: routeColor,
               weight: 6,
@@ -260,7 +280,7 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
         )}
 
         {/* 3. User Clicked Location Marker */}
-        {clickedPoint && (
+        {clickedPoint && Array.isArray(clickedPoint) && clickedPoint.length >= 2 && !isNaN(clickedPoint[0]) && !isNaN(clickedPoint[1]) && (
           <Marker position={clickedPoint} icon={customClickIcon}>
             <Popup>
               <div className="p-1 text-xs">
@@ -277,9 +297,11 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
         {/* 4. Hazard Overlay */}
         {activeLayers.hazards && forecast && (
           <>
-            {forecast.cone_polygon && (
+            {forecast.cone_polygon && Array.isArray(forecast.cone_polygon) && forecast.cone_polygon.length >= 3 && (
               <Polygon
-                positions={forecast.cone_polygon.map(pt => [pt[1], pt[0]])}
+                positions={forecast.cone_polygon
+                  .filter(pt => Array.isArray(pt) && pt.length >= 2 && !isNaN(pt[0]) && !isNaN(pt[1]))
+                  .map(pt => [pt[1], pt[0]])}
                 pathOptions={{
                   color: '#f59e0b',
                   fillColor: '#f59e0b',
@@ -304,6 +326,9 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
 
         {/* 5. Ambulances with Interactive Routing */}
         {activeLayers.ambulances && ambulances.map((amb) => {
+          if (!amb || !Array.isArray(amb.location) || amb.location.length < 2 || isNaN(amb.location[0]) || isNaN(amb.location[1])) {
+            return null;
+          }
           const lat = amb.location[1];
           const lon = amb.location[0];
           const isAvail = amb.status === 'Available';
@@ -344,6 +369,9 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
 
         {/* 6. Hospitals with Capacity & Direct Routing */}
         {activeLayers.hospitals && hospitals.map((hosp) => {
+          if (!hosp || !Array.isArray(hosp.location) || hosp.location.length < 2 || isNaN(hosp.location[0]) || isNaN(hosp.location[1])) {
+            return null;
+          }
           const lat = hosp.location[1];
           const lon = hosp.location[0];
           const isDerated = !hosp.has_power || hosp.free_icu_beds === 0 || !hosp.has_comms;
@@ -388,6 +416,9 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
 
         {/* 7. Emergency Incidents */}
         {activeLayers.incidents && emergency_calls.map((call) => {
+          if (!call || !Array.isArray(call.location) || call.location.length < 2 || isNaN(call.location[0]) || isNaN(call.location[1])) {
+            return null;
+          }
           const lat = call.location[1];
           const lon = call.location[0];
           const isCrit = call.priority.includes('Critical') || call.priority.includes('P1');
@@ -427,6 +458,9 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
 
         {/* 8. Shelters */}
         {activeLayers.shelters && shelters.map((s) => {
+          if (!s || !Array.isArray(s.location) || s.location.length < 2 || isNaN(s.location[0]) || isNaN(s.location[1])) {
+            return null;
+          }
           const lat = s.location[1];
           const lon = s.location[0];
           return (
