@@ -15,6 +15,7 @@ import {
 } from '../../services/db/medicalIdDB';
 import { STATIC_DISASTER_GUIDELINES, OfflineSOSPacket, offlineMeshNetwork } from '../../services/offlineMeshNetwork';
 import { radioAudioBeacon } from '../../services/radioAudioBeacon';
+import { BluetoothBeaconRadar } from './BluetoothBeaconRadar';
 
 export const PatientSOSDashboard: React.FC = () => {
   const { peerId, isReady, connectionMode, lastAckPacket, sendSOSPacket } = useWebRTCMesh('PATIENT');
@@ -297,6 +298,15 @@ export const PatientSOSDashboard: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* 2.5 Bluetooth Low Energy (BLE) Beacon & Mesh Transmitter */}
+        <BluetoothBeaconRadar
+          role="PATIENT"
+          victimName={medicalId?.fullName || 'Citizen Patient'}
+          bloodType={medicalId?.bloodType || 'O-Negative'}
+          lat={gpsPosition?.latitude || 19.8050}
+          lon={gpsPosition?.longitude || 85.8280}
+        />
 
         {/* 3. IndexedDB Medical ID Profile Card */}
         <div className="bg-slate-950 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-xl space-y-4">

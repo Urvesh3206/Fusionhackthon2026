@@ -9,6 +9,7 @@ import { OfflineSOSPacket, offlineMeshNetwork } from '../../services/offlineMesh
 import { calculateDistanceKm } from '../../services/liveFacilities';
 import { LeafletDisasterMap } from '../Map/LeafletDisasterMap';
 import { useEmergencyStore } from '../../stores/useEmergencyStore';
+import { BluetoothBeaconRadar } from './BluetoothBeaconRadar';
 
 export const AdminTriageMap: React.FC = () => {
   const { state } = useEmergencyStore();
@@ -313,6 +314,15 @@ export const AdminTriageMap: React.FC = () => {
                     GPS: {activeAlert.location.latitude.toFixed(4)}°N, {activeAlert.location.longitude.toFixed(4)}°E
                   </span>
                 </div>
+
+                {/* BLE Beacon & BIN Mesh Scanner */}
+                <BluetoothBeaconRadar
+                  role="ADMIN"
+                  victimName={activeAlert.senderName}
+                  bloodType={activeAlert.medicalId.bloodType}
+                  lat={activeAlert.location.latitude}
+                  lon={activeAlert.location.longitude}
+                />
 
                 <div className="h-[340px] w-full rounded-2xl overflow-hidden border border-slate-800">
                   <LeafletDisasterMap
