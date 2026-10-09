@@ -167,13 +167,49 @@ async def broadcast_state():
         if ws in active_ws_connections:
             active_ws_connections.remove(ws)
 
+# In-Memory Store for P2P and Cross-Device SOS Packets
+sos_packets_store: List[Dict[str, Any]] = [
+    {
+        "packetId": "SOS-MESH-DEMO-01",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "senderId": "PATIENT-PURI-9437",
+        "senderName": "Priyanka Mohapatra",
+        "senderRole": "PATIENT",
+        "location": {
+            "latitude": 19.8050,
+            "longitude": 85.8280,
+            "accuracy": 4,
+            "timestamp": int(time.time() * 1000)
+        },
+        "medicalId": {
+            "fullName": "Priyanka Mohapatra",
+            "bloodType": "O-Negative (Universal)",
+            "allergies": ["Severe Penicillin Anaphylaxis", "Shellfish Allergy"],
+            "chronicConditions": ["Asthma (Inhaler Required)", "Type-1 Diabetes"],
+            "medications": ["Salbutamol 100mcg", "Insulin Glargine"],
+            "emergencyContactName": "Debabrata Mohapatra (Father)",
+            "emergencyContactPhone": "+91 94370 12345",
+            "notes": "Carries rescue inhaler in left backpack pouch."
+        },
+        "triagePriority": "CRITICAL_RED",
+        "triageReason": "Automated Triage: Severe Penicillin Anaphylaxis + Asthma Emergency Surge",
+        "status": "BROADCASTING",
+        "meshHopCount": 1
+    }
+]
+
 # ----------------- 1. AUTHENTICATION & ROLES -----------------
 @app.post("/auth/login", response_model=LoginResponse)
 def login(req: LoginRequest):
-    username = req.username.lower().strip()
-    user = DEMO_USERS.get(username)
+    key = req.username.lower().strip()
+    user = DEMO_USERS.get(key)
     if not user:
-        user = DEMO_USERS["admin"]
+        if "doctor" in key or "med" in key:
+            user = DEMO_USERS["doctor"]
+        elif "citizen" in key or "patient" in key or "user" in key:
+            user = DEMO_USERS["citizen"]
+        else:
+            user = DEMO_USERS["admin"]
     return LoginResponse(
         token=f"token_{user.username}",
         token_type="bearer",
@@ -191,6 +227,93 @@ def get_available_roles():
         {"role": u.role, "username": u.username, "name": u.full_name, "email": u.email, "permissions": u.permissions}
         for u in DEMO_USERS.values()
     ]
+
+# ----------------- 1.1 CROSS-DEVICE & CLOUDFLARE SOS NETWORK -----------------
+@app.post("/emergency/sos")
+async def broadcast_sos_alert(packet: Dict[str, Any]):
+    p_id = packet.get("packetId", f"SOS-MESH-{int(time.time()*1000)}")
+    packet["packetId"] = p_id
+    
+    existing = next((p for p in sos_packets_store if p.get("packetId") == p_id), None)
+    if existing:
+        sos_packets_store.remove(existing)
+    sos_packets_store.insert(0, packet)
+    
+    # Also register as EmergencyCall in scenario_engine state so it appears everywhere
+    state = scenario_engine.get_current_state()
+    loc = [packet.get("location", {}).get("longitude", 85.8280), packet.get("location", {}).get("latitude", 19.8050)]
+    med_info = packet.get("medicalId", {})
+    patient_name = packet.get("senderName", med_info.get("fullName", "Emergency Victim"))
+    
+    call_id = f"sos_{p_id.lower().replace('-', '_')}"
+    existing_call = next((c for c in state.emergency_calls if c.id == call_id or p_id in c.id), None)
+    if not existing_call:
+        new_call = EmergencyCall(
+            id=call_id,
+            timestamp=packet.get("timestamp", datetime.utcnow().isoformat() + "Z"),
+            priority="P1_Critical" if packet.get("triagePriority") == "CRITICAL_RED" else "P2_Urgent",
+            patient_condition=f"{patient_name}: {packet.get('triageReason', 'Emergency Assistance Requested')}",
+            required_specialty="Trauma Care" if "Anaphylaxis" in packet.get("triageReason", "") else "Emergency Care",
+            location=loc,
+            district_zone="Puri Coastal Sector",
+            status="Dispatched" if packet.get("status") == "EN_ROUTE" else "Pending",
+            assigned_ambulance_id=packet.get("acknowledgedBy", {}).get("unitCallsign", "ALS Ambulance Unit #04") if packet.get("status") == "EN_ROUTE" else None,
+            simulated=False
+        )
+        scenario_engine.add_emergency_call(new_call)
+    
+    await broadcast_state()
+    return {"status": "SUCCESS", "packet": packet}
+
+@app.get("/emergency/sos")
+def get_sos_alerts():
+    return sos_packets_store
+
+@app.post("/emergency/sos/{packet_id}/dispatch")
+async def dispatch_sos_alert(packet_id: str, payload: Dict[str, Any] = {}):
+    target = next((p for p in sos_packets_store if p.get("packetId") == packet_id), None)
+    if not target:
+        target = {
+            "packetId": packet_id,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "senderId": "PATIENT-PURI",
+            "senderName": "Emergency Victim",
+            "senderRole": "PATIENT",
+            "location": {"latitude": 19.8050, "longitude": 85.8280, "accuracy": 4, "timestamp": int(time.time()*1000)},
+            "medicalId": {"fullName": "Emergency Victim", "bloodType": "O+", "allergies": [], "chronicConditions": [], "medications": [], "emergencyContactName": "", "emergencyContactPhone": "", "notes": ""},
+            "triagePriority": "CRITICAL_RED",
+            "triageReason": "Emergency SOS Dispatched",
+            "status": "EN_ROUTE",
+            "meshHopCount": 1
+        }
+        sos_packets_store.insert(0, target)
+    
+    target["status"] = "EN_ROUTE"
+    target["acknowledgedBy"] = {
+        "responderId": payload.get("responderId", "dr-cmo-01"),
+        "responderName": payload.get("responderName", "Dr. Subrat Mishra (Chief Medical Officer)"),
+        "unitCallsign": payload.get("unitCallsign", "ALS Ambulance Unit #04"),
+        "estimatedEtaMinutes": payload.get("estimatedEtaMinutes", 5),
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+    
+    # Update state in scenario_engine
+    call_id = f"sos_{packet_id.lower().replace('-', '_')}"
+    state = scenario_engine.get_current_state()
+    for c in state.emergency_calls:
+        if c.id == call_id or packet_id in c.id:
+            c.status = "Dispatched"
+            c.assigned_ambulance_id = target["acknowledgedBy"]["unitCallsign"]
+            
+    await broadcast_state()
+    return {"status": "SUCCESS", "packet": target}
+
+@app.get("/emergency/sos/{packet_id}/status")
+def get_sos_packet_status(packet_id: str):
+    target = next((p for p in sos_packets_store if p.get("packetId") == packet_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="SOS Packet not found")
+    return target
 
 # ----------------- 2. SYSTEM STATUS & HEALTH -----------------
 @app.get("/health")

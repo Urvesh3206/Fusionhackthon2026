@@ -141,6 +141,12 @@ class OfflineMeshNetworkManager {
   constructor() {
     this.initMeshChannel();
     this.initStorageListener();
+    if (typeof window !== 'undefined') {
+      this.syncFromBackend();
+      setInterval(() => {
+        this.syncFromBackend();
+      }, 2500);
+    }
   }
 
   private initMeshChannel() {
@@ -175,6 +181,42 @@ class OfflineMeshNetworkManager {
           } catch { /* ignore */ }
         }
       });
+    }
+  }
+
+  /**
+   * Sync active emergency SOS alerts with shared FastAPI backend for cross-device / Cloudflare support.
+   */
+  public async syncFromBackend(): Promise<void> {
+    try {
+      const res = await fetch('/api/emergency/sos');
+      if (!res.ok) return;
+      const backendPackets: OfflineSOSPacket[] = await res.json();
+      if (!Array.isArray(backendPackets) || backendPackets.length === 0) return;
+
+      const current = this.getStoredPackets();
+      let hasChanges = false;
+
+      backendPackets.forEach((bPacket) => {
+        const local = current.find(p => p.packetId === bPacket.packetId);
+        if (!local) {
+          current.unshift(bPacket);
+          hasChanges = true;
+          this.handleIncomingPacket(bPacket);
+        } else if (local.status !== bPacket.status || (bPacket.status === 'EN_ROUTE' && !local.acknowledgedBy)) {
+          Object.assign(local, bPacket);
+          hasChanges = true;
+          if (bPacket.status === 'EN_ROUTE') {
+            this.handleIncomingAck(bPacket);
+          }
+        }
+      });
+
+      if (hasChanges) {
+        this.savePacketsToStorage(current);
+      }
+    } catch {
+      // Offline fallback: continue operating using P2P mesh and IndexedDB
     }
   }
 
@@ -221,7 +263,7 @@ class OfflineMeshNetworkManager {
     };
   }
 
-  // Broadcast Offline SOS Packet from User Profile
+  // Broadcast Offline SOS Packet from User Profile (Cross-Device + Cloudflare)
   public broadcastSOS(
     coords: { latitude: number; longitude: number; accuracy: number },
     customNotes?: string
@@ -261,7 +303,16 @@ class OfflineMeshNetworkManager {
       localStorage.setItem('resqgrid_mesh_latest_sos', JSON.stringify(packet));
     } catch { /* ignore */ }
 
-    // 4. Notify local in-memory listeners
+    // 4. Send to shared FastAPI backend for cross-device / Cloudflare support
+    try {
+      fetch('/api/emergency/sos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(packet)
+      }).catch(() => {});
+    } catch { /* offline fallback */ }
+
+    // 5. Notify local in-memory listeners
     this.handleIncomingPacket(packet);
 
     return packet;
@@ -270,11 +321,11 @@ class OfflineMeshNetworkManager {
   // Admin Acknowledgment: Doctor/Ambulance accepts dispatch and replies back
   public acknowledgeDispatch(
     packetId: string,
-    responderName: string = 'Dr. A. Senapati (Chief Triage Officer)',
-    unitCallsign: string = 'ALS Ambulance #04'
+    responderName: string = 'Dr. Subrat Mishra (Chief Medical Officer)',
+    unitCallsign: string = 'ALS Ambulance Unit #04'
   ): OfflineSOSPacket | null {
     const packets = this.getStoredPackets();
-    const target = packets.find(p => p.packetId === packetId);
+    const target = packets.find(p => p.packetId === packetId) || packets[0];
     if (!target) return null;
 
     const updatedPacket: OfflineSOSPacket = {
@@ -284,7 +335,7 @@ class OfflineMeshNetworkManager {
         responderId: `RESP-${Date.now().toString().slice(-4)}`,
         responderName,
         unitCallsign,
-        estimatedEtaMinutes: Math.floor(Math.random() * 8 + 4),
+        estimatedEtaMinutes: Math.floor(Math.random() * 4 + 4),
         timestamp: new Date().toISOString()
       }
     };
@@ -299,6 +350,15 @@ class OfflineMeshNetworkManager {
     try {
       localStorage.setItem('resqgrid_mesh_latest_ack', JSON.stringify(updatedPacket));
     } catch { /* ignore */ }
+
+    // Send dispatch confirmation to shared backend for cross-device / Cloudflare delivery
+    try {
+      fetch(`/api/emergency/sos/${packetId}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedPacket.acknowledgedBy)
+      }).catch(() => {});
+    } catch { /* offline fallback */ }
 
     this.handleIncomingAck(updatedPacket);
     return updatedPacket;
