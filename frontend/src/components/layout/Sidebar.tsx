@@ -109,7 +109,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
       >
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-full bg-cyan-600/30 border border-cyan-500/40 flex items-center justify-center font-bold text-xs text-cyan-300 group-hover:bg-cyan-500 group-hover:text-white transition flex-shrink-0">
-            {currentUser.username.slice(0, 2).toUpperCase()}
+            {currentUser.username.includes(' ')
+              ? currentUser.username.split(' ').map(w => w[0]).join('').toUpperCase()
+              : currentUser.username.slice(0, 2).toUpperCase()}
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">

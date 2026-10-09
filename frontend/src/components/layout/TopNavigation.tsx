@@ -141,16 +141,20 @@ export const TopNavigation: React.FC = () => {
             <span>Profile</span>
           </button>
 
-          {/* Role Switcher Dropdown */}
+            {/* Role Switcher Dropdown */}
           <div className="relative">
             <button
               onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
               className="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 text-xs font-medium transition"
             >
-              <div className="w-5 h-5 rounded-full bg-cyan-600 text-white flex items-center justify-center text-[10px] font-bold">
-                {currentUser.username[0].toUpperCase()}
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
+                {currentUser.username.includes(' ')
+                  ? currentUser.username.split(' ').map(w => w[0]).join('').toUpperCase()
+                  : currentUser.username.slice(0, 2).toUpperCase()}
               </div>
-              <span className="hidden sm:inline font-semibold">{currentUser.full_name.split(' ')[0]}</span>
+              <span className="hidden sm:inline font-semibold">
+                {currentUser.full_name.startsWith('Team Delta') ? 'Team Delta' : currentUser.full_name.split(' ')[0]}
+              </span>
               <span className="px-1.5 py-0.2 bg-slate-700 text-[10px] text-cyan-300 rounded uppercase font-bold">
                 {currentUser.role}
               </span>

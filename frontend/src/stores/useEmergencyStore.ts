@@ -23,12 +23,12 @@ export const DEMO_USER_PROFILES: Record<UserRole, User> = {
     is_active: true
   },
   admin: {
-    id: "usr_admin_01",
-    username: "admin",
-    full_name: "Dr. Elena Vance (EOC Director & Admin)",
+    id: "usr_admin_team_delta",
+    username: "Team Delta",
+    full_name: "Team Delta (EOC Command & System Admin)",
     role: "admin",
-    organization: "IFRC - Odisha Disaster Response",
-    email: "elena.vance@ifrc-odisha.org",
+    organization: "Team Delta — ResQGrid Command Center",
+    email: "teamdelta@resqgrid-ai.org",
     permissions: ["*"],
     is_active: true
   },

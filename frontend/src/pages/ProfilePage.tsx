@@ -132,7 +132,9 @@ export const ProfilePage: React.FC = () => {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start md:items-center space-x-5">
             <div className={`w-20 h-20 rounded-2xl bg-gradient-to-tr ${roleInfo.color} flex items-center justify-center shadow-xl shadow-cyan-500/20 text-white font-black text-2xl flex-shrink-0 ring-4 ring-slate-800`}>
-              {currentUser.username.substring(0, 2).toUpperCase()}
+              {currentUser.username.includes(' ')
+                ? currentUser.username.split(' ').map(w => w[0]).join('').toUpperCase()
+                : currentUser.username.substring(0, 2).toUpperCase()}
             </div>
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
@@ -280,7 +282,7 @@ export const ProfilePage: React.FC = () => {
                 </span>
               )}
             </div>
-            <h3 className="font-bold text-sm text-slate-100">3. Admin / EOC Director</h3>
+            <h3 className="font-bold text-sm text-slate-100">3. Admin (Team Delta Command)</h3>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               Full Master Control: AI Global Replan (MEXCLP), ambulance fleet redeployment, road network closure injection, and decision ledger audit.
             </p>
