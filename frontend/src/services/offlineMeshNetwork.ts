@@ -433,57 +433,14 @@ class OfflineMeshNetworkManager {
     };
   }
 
-  // High-Volume Emergency Alarm Sound (Web Audio Siren)
+  // Emergency Alarm Sound (Muted / Silent Mode)
   public triggerEmergencyAlarmSound() {
-    try {
-      if (this.isAlarmPlaying) return;
-      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtxClass) return;
-
-      this.audioCtx = new AudioCtxClass();
-      if (this.audioCtx.state === 'suspended') {
-        this.audioCtx.resume();
-      }
-
-      this.isAlarmPlaying = true;
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
-
-      osc.type = 'sawtooth';
-      gain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
-
-      // European emergency dual-tone siren frequency modulation
-      const now = this.audioCtx.currentTime;
-      osc.frequency.setValueAtTime(960, now);
-      for (let i = 0; i < 10; i++) {
-        osc.frequency.linearRampToValueAtTime(770, now + i * 0.8 + 0.4);
-        osc.frequency.linearRampToValueAtTime(960, now + i * 0.8 + 0.8);
-      }
-
-      osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
-      osc.start();
-
-      this.alarmOscillator = osc;
-      this.alarmGain = gain;
-
-      // Auto stop after 6 seconds
-      setTimeout(() => {
-        this.stopEmergencyAlarmSound();
-      }, 6000);
-    } catch (e) {
-      console.warn('Audio siren trigger blocked by browser policy:', e);
-    }
+    // Sound disabled per user request
+    this.isAlarmPlaying = false;
   }
 
   public stopEmergencyAlarmSound() {
-    try {
-      if (this.alarmOscillator) {
-        this.alarmOscillator.stop();
-        this.alarmOscillator.disconnect();
-      }
-      this.isAlarmPlaying = false;
-    } catch { /* ignore */ }
+    this.isAlarmPlaying = false;
   }
 }
 
