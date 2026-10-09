@@ -2,10 +2,30 @@ import { create } from 'zustand';
 import { FullSystemState, OptimizationPlanResponse, OverrideLogEntry, User, UserRole } from '../types';
 
 export const DEMO_USER_PROFILES: Record<UserRole, User> = {
+  citizen: {
+    id: "usr_citizen_01",
+    username: "citizen",
+    full_name: "Aarav Sharma (Resident / Public User)",
+    role: "citizen",
+    organization: "Puri Coastal Resident / General Public",
+    email: "aarav.sharma@puri-resident.in",
+    permissions: ["sos:call", "hospitals:view", "routes:navigate", "incident:report", "alerts:read"],
+    is_active: true
+  },
+  doctor: {
+    id: "usr_doctor_01",
+    username: "doctor",
+    full_name: "Dr. Subrat Mishra (Chief Medical Officer)",
+    role: "doctor",
+    organization: "Puri District Headquarters Hospital",
+    email: "subrat.mishra@dhh-puri.gov.in",
+    permissions: ["beds:manage", "icu:update", "triage:accept", "derate:toggle", "inventory:order", "patients:view"],
+    is_active: true
+  },
   admin: {
     id: "usr_admin_01",
     username: "admin",
-    full_name: "Dr. Elena Vance (EOC Director)",
+    full_name: "Dr. Elena Vance (EOC Director & Admin)",
     role: "admin",
     organization: "IFRC - Odisha Disaster Response",
     email: "elena.vance@ifrc-odisha.org",
@@ -35,7 +55,7 @@ export const DEMO_USER_PROFILES: Record<UserRole, User> = {
   medical_coordinator: {
     id: "usr_med_01",
     username: "medical",
-    full_name: "Dr. Subrat Mishra (Chief Medical Officer)",
+    full_name: "Dr. Subrat Mishra (Medical Coordinator)",
     role: "medical_coordinator",
     organization: "Puri District Headquarters Hospital",
     email: "subrat.mishra@dhh-puri.gov.in",

@@ -16,6 +16,7 @@ import { AnalyticsReportsPage } from './pages/AnalyticsReportsPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export function App() {
@@ -27,6 +28,7 @@ export function App() {
           <Route index element={<DashboardPage />} />
           <Route path="dashboard" element={<Navigate to="/" replace />} />
           <Route path="map" element={<DisasterMapPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="hazards" element={<HazardIntelligencePage />} />
           <Route path="incidents" element={<IncidentsPage />} />
           <Route path="dispatch" element={<DispatchPage />} />

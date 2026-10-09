@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Map, Flame, AlertCircle, Send, 
   Truck, Hospital, Package, Users, PlaySquare, 
   BarChart3, Bell, Settings, FileText, LifeBuoy,
-  ChevronLeft, ChevronRight, ShieldAlert, CheckCircle
+  ChevronLeft, ChevronRight, ShieldAlert, CheckCircle, User
 } from 'lucide-react';
 import { useEmergencyStore } from '../../stores/useEmergencyStore';
 
@@ -23,6 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
   const navItems = [
     { to: '/', label: 'Operations Dashboard', icon: LayoutDashboard, badge: null },
     { to: '/map', label: 'Live Disaster Map', icon: Map, badge: null },
+    { to: '/profile', label: 'User Profile & Roles', icon: User, badge: currentUser.role.toUpperCase(), badgeColor: 'bg-cyan-500/20 text-cyan-300' },
     { to: '/hazards', label: 'Hazard Intelligence', icon: Flame, badge: state?.forecast ? state.forecast.step_id : null, badgeColor: 'bg-amber-500/20 text-amber-400' },
     { to: '/incidents', label: 'Emergency Incidents', icon: AlertCircle, badge: activeIncidents > 0 ? `${activeIncidents}` : null, badgeColor: 'bg-red-500/20 text-red-400' },
     { to: '/dispatch', label: 'Emergency Dispatch', icon: Send, badge: 'AI', badgeColor: 'bg-cyan-500/20 text-cyan-400' },
@@ -101,20 +102,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
         })}
       </div>
 
-      {/* User / Organization Profile Card in Footer */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-900/40">
+      {/* User / Organization Profile Card in Footer (Clickable to /profile) */}
+      <NavLink 
+        to="/profile"
+        className="p-3 border-t border-slate-800/80 bg-slate-900/40 hover:bg-slate-850/80 transition cursor-pointer group block"
+      >
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-cyan-400 flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-cyan-600/30 border border-cyan-500/40 flex items-center justify-center font-bold text-xs text-cyan-300 group-hover:bg-cyan-500 group-hover:text-white transition flex-shrink-0">
             {currentUser.username.slice(0, 2).toUpperCase()}
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-medium text-slate-200 truncate">{currentUser.full_name}</span>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{currentUser.role.replace('_', ' ')}</span>
+              <span className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300 transition truncate">{currentUser.full_name}</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">{currentUser.role.replace('_', ' ')}</span>
             </div>
           )}
         </div>
-      </div>
+      </NavLink>
     </aside>
   );
 };

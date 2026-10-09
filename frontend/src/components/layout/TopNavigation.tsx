@@ -26,6 +26,7 @@ export const TopNavigation: React.FC = () => {
       case '/':
       case '/dashboard': return 'Operations Dashboard';
       case '/map': return 'Live Disaster Map';
+      case '/profile': return 'User Profile & Multi-Role Access Hub';
       case '/hazards': return 'Hazard Intelligence & Forecasts';
       case '/incidents': return 'Emergency Incident Management';
       case '/dispatch': return 'Hazard-Aware Emergency Dispatch';
@@ -130,6 +131,16 @@ export const TopNavigation: React.FC = () => {
             </span>
           </button>
 
+          {/* Profile Shortcut Button */}
+          <button
+            onClick={() => navigate('/profile')}
+            title="Open Profile & Role Command Hub"
+            className="hidden sm:flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 text-xs font-semibold transition shadow-sm"
+          >
+            <User className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Profile</span>
+          </button>
+
           {/* Role Switcher Dropdown */}
           <div className="relative">
             <button
@@ -147,9 +158,18 @@ export const TopNavigation: React.FC = () => {
             </button>
 
             {roleDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-2 z-50 text-xs">
-                <div className="px-3 py-1.5 border-b border-slate-800 text-[11px] text-slate-400 font-semibold uppercase">
-                  Switch Operational Role
+              <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-2 z-50 text-xs">
+                <div className="px-3 py-1.5 border-b border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase">
+                  <span>Switch Operational Profile</span>
+                  <button 
+                    onClick={() => {
+                      setRoleDropdownOpen(false);
+                      navigate('/profile');
+                    }}
+                    className="text-cyan-400 hover:underline capitalize font-bold"
+                  >
+                    View All &rarr;
+                  </button>
                 </div>
                 {(Object.keys(DEMO_USER_PROFILES) as UserRole[]).map((r) => {
                   const prof = DEMO_USER_PROFILES[r];
@@ -171,10 +191,20 @@ export const TopNavigation: React.FC = () => {
                     </button>
                   );
                 })}
-                <div className="border-t border-slate-800 mt-1 pt-1">
+                <div className="border-t border-slate-800 mt-1 pt-1 px-2 space-y-1">
+                  <button
+                    onClick={() => {
+                      setRoleDropdownOpen(false);
+                      navigate('/profile');
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-cyan-400 hover:bg-cyan-500/10 rounded flex items-center space-x-2 font-medium"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>Open User Profile & Role Hub</span>
+                  </button>
                   <button
                     onClick={() => navigate('/login')}
-                    className="w-full text-left px-3 py-1.5 text-rose-400 hover:bg-rose-500/10 flex items-center space-x-2"
+                    className="w-full text-left px-3 py-1.5 text-rose-400 hover:bg-rose-500/10 rounded flex items-center space-x-2"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Switch or Sign Out</span>
