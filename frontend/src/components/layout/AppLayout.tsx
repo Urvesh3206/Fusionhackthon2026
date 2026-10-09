@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopNavigation } from './TopNavigation';
 import { NotificationDrawer } from './NotificationDrawer';
@@ -9,7 +9,8 @@ import { initWebSocket } from '../../services/websocket';
 
 export const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { setState, setPlan, setConnected, uiThemeMode } = useEmergencyStore();
+  const { setState, setPlan, setConnected, uiThemeMode, currentUser } = useEmergencyStore();
+  const location = useLocation();
 
   const isFriendly = uiThemeMode === 'user-friendly';
 
@@ -36,6 +37,20 @@ export const AppLayout: React.FC = () => {
       ws.disconnect();
     };
   }, [setState, setPlan, setConnected]);
+
+  // Strict Role-Based Route Guarding
+  const currentPath = location.pathname;
+  if (currentUser.role === 'citizen') {
+    const allowedCitizenRoutes = ['/radio-sos', '/map', '/profile', '/comms'];
+    if (!allowedCitizenRoutes.includes(currentPath)) {
+      return <Navigate to="/radio-sos" replace />;
+    }
+  } else if (currentUser.role === 'doctor' || currentUser.role === 'medical_coordinator') {
+    const allowedDoctorRoutes = ['/radio-sos', '/hospitals', '/fleet', '/resources', '/map', '/profile'];
+    if (!allowedDoctorRoutes.includes(currentPath)) {
+      return <Navigate to="/radio-sos" replace />;
+    }
+  }
 
   return (
     <div className={`flex h-screen w-screen overflow-hidden antialiased transition-colors duration-200 ${

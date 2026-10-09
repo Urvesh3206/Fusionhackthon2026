@@ -146,70 +146,93 @@ export const TopNavigation: React.FC = () => {
             <span>Emergency SOS</span>
           </button>
 
-          {/* User Profile & Role Switcher */}
+          {/* User Profile & Account Menu */}
           <div className="relative">
             <button
               onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
               className="flex items-center space-x-2 p-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition"
+              aria-label="User Account Menu"
             >
-              <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+              <div className={`w-7 h-7 rounded-lg text-white flex items-center justify-center font-bold text-xs ${
+                currentUser.role === 'citizen' ? 'bg-rose-600' : currentUser.role === 'doctor' ? 'bg-emerald-600' : 'bg-indigo-600'
+              }`}>
                 {currentUser.username.slice(0, 2).toUpperCase()}
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
             {roleDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl py-2 z-50">
-                <div className="px-4 py-2.5 border-b border-slate-100">
-                  <p className="text-xs font-bold text-slate-800">{currentUser.full_name}</p>
-                  <p className="text-[11px] text-slate-500 capitalize">{currentUser.role.replace('_', ' ').toLowerCase()}</p>
-                </div>
-
-                <div className="p-1">
-                  <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Select Active Profile
+              <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                {/* User Info Header */}
+                <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl">
+                  <p className="text-xs font-bold text-slate-900 truncate">{currentUser.full_name}</p>
+                  <p className="text-[11px] text-slate-500 font-mono mt-0.5">{currentUser.email || `${currentUser.username}@resqgrid.in`}</p>
+                  <div className="mt-2">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      currentUser.role === 'citizen'
+                        ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                        : currentUser.role === 'doctor'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                    }`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                      <span>{currentUser.role === 'citizen' ? 'Citizen Account' : currentUser.role === 'doctor' ? 'Doctor Account' : 'EOC Admin Account'}</span>
+                    </span>
                   </div>
-                  {[
-                    { role: 'citizen' as UserRole, name: '1. User Profile (Patient / Citizen)', desc: 'Emergency SOS, Medical ID & Safe Map', badge: 'User Only' },
-                    { role: 'doctor' as UserRole, name: '2. Doctor Profile (Hospital & Medical)', desc: 'Hospital Beds, ICU & Patient Triage', badge: 'Doctor' },
-                    { role: 'admin' as UserRole, name: '3. Admin Profile (EOC Command)', desc: 'Full Master Access & Operations', badge: 'Admin Master' }
-                  ].map((p) => {
-                    const isCur = currentUser.role === p.role;
-                    return (
-                      <button
-                        key={p.role}
-                        onClick={() => {
-                          switchRole(p.role);
-                          setRoleDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center justify-between transition ${
-                          isCur
-                            ? 'bg-indigo-50 text-indigo-700 font-bold shadow-xs'
-                            : 'text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="flex flex-col pr-2">
-                          <span className="font-semibold text-slate-900">{p.name}</span>
-                          <span className="text-[10px] text-slate-500">{p.desc}</span>
-                        </div>
-                        {isCur && (
-                          <CheckCircle className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
                 </div>
 
-                <div className="pt-1 border-t border-slate-100">
+                {/* Account Actions */}
+                <div className="p-1 space-y-1">
                   <button
                     onClick={() => {
                       setRoleDropdownOpen(false);
                       navigate('/profile');
                     }}
-                    className="w-full text-left px-4 py-2 text-xs flex items-center space-x-2 text-slate-700 hover:bg-slate-100 transition"
+                    className="w-full text-left px-3 py-2 text-xs flex items-center space-x-2 text-slate-700 hover:bg-slate-100 rounded-xl transition"
                   >
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span>View Profile</span>
+                    <User className="w-4 h-4 text-slate-400" />
+                    <span>View Profile & Medical Record</span>
+                  </button>
+
+                  {/* If Admin, allow testing other views in supervisory mode */}
+                  {currentUser.role === 'admin' && (
+                    <div className="pt-2 border-t border-slate-100">
+                      <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Admin Preview Sandbox
+                      </div>
+                      {[
+                        { role: 'citizen' as UserRole, name: 'Preview Patient SOS View', color: 'hover:text-rose-600' },
+                        { role: 'doctor' as UserRole, name: 'Preview Doctor Triage View', color: 'hover:text-emerald-600' },
+                        { role: 'admin' as UserRole, name: 'Master EOC Command', color: 'hover:text-indigo-600' }
+                      ].map((p) => (
+                        <button
+                          key={p.role}
+                          onClick={() => {
+                            switchRole(p.role);
+                            setRoleDropdownOpen(false);
+                            navigate(p.role === 'citizen' ? '/radio-sos' : (p.role === 'doctor' ? '/radio-sos' : '/'));
+                          }}
+                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-600 hover:bg-slate-100 ${p.color} transition`}
+                        >
+                          <span>{p.name}</span>
+                          {currentUser.role === p.role && <CheckCircle className="w-3.5 h-3.5 text-indigo-600" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Secure Sign Out Button */}
+                <div className="pt-2 px-2 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setRoleDropdownOpen(false);
+                      navigate('/login');
+                    }}
+                    className="w-full px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl transition flex items-center justify-center space-x-1.5"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out / Switch Account</span>
                   </button>
                 </div>
               </div>
