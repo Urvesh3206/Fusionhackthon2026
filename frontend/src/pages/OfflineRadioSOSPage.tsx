@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { User, ShieldAlert, Radio, Activity, BookOpen, Heart, Cpu } from 'lucide-react';
-import { UserSOSInterface } from '../components/sos/UserSOSInterface';
-import { AdminSOSInterface } from '../components/sos/AdminSOSInterface';
+import { User, ShieldAlert, Radio, Activity, BookOpen, Heart, Cpu, Network } from 'lucide-react';
+import { PatientSOSDashboard } from '../components/sos/PatientSOSDashboard';
+import { AdminTriageMap } from '../components/sos/AdminTriageMap';
 import { useEmergencyStore } from '../stores/useEmergencyStore';
 
 type SOSTab = 'user-victim' | 'admin-dispatch';
@@ -27,7 +27,7 @@ export const OfflineRadioSOSPage: React.FC = () => {
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
-            <span>1. User Profile (Patient / Victim SOS)</span>
+            <span>1. Patient Profile (WebRTC SOS Sender)</span>
           </button>
 
           <button
@@ -39,20 +39,21 @@ export const OfflineRadioSOSPage: React.FC = () => {
             }`}
           >
             <Activity className="w-4 h-4" />
-            <span>2. Admin Profile (Doctor / Ambulance / Dispatch)</span>
+            <span>2. Admin Profile (Doctor / Triage Map Receiver)</span>
           </button>
         </div>
 
-        <div className="text-[11px] text-slate-400 font-mono hidden md:block">
-          Bluetooth Low Energy (BLE) & Wi-Fi Direct Mesh Simulation Active
+        <div className="text-[11px] text-slate-400 font-mono hidden md:flex items-center space-x-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>WebRTC DataChannel & PWA Offline Mesh Engine Ready</span>
         </div>
       </div>
 
       {/* Profile Content */}
       {activeTab === 'user-victim' ? (
-        <UserSOSInterface />
+        <PatientSOSDashboard />
       ) : (
-        <AdminSOSInterface />
+        <AdminTriageMap />
       )}
     </div>
   );
