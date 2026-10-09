@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Peer, DataConnection } from 'peerjs';
-import { OfflineSOSPacket } from '../services/offlineMeshNetwork';
+import { OfflineSOSPacket, offlineMeshNetwork } from '../services/offlineMeshNetwork';
 
 export interface WebRTCMeshState {
   myPeerId: string;
@@ -119,9 +119,12 @@ export function useWebRTCMesh(role: 'PATIENT' | 'ADMIN', customPeerId?: string) 
     });
   };
 
-  // Broadcast SOS Packet over WebRTC DataChannel & Local Mesh
+  // Broadcast SOS Packet over WebRTC DataChannel, Local Mesh & Storage
   const sendSOSPacket = useCallback((packet: OfflineSOSPacket) => {
-    // 1. Send via active WebRTC DataChannels to Admin Node
+    // 1. Save to resilient offlineMesh storage
+    offlineMeshNetwork.savePacketToStorage(packet);
+
+    // 2. Send via active WebRTC DataChannels to Admin Node
     if (peerRef.current && role === 'PATIENT') {
       try {
         const conn = peerRef.current.connect(ADMIN_PEER_ID, { reliable: true });
@@ -134,19 +137,23 @@ export function useWebRTCMesh(role: 'PATIENT' | 'ADMIN', customPeerId?: string) 
       }
     }
 
-    // 2. Broadcast across all active open data connections
+    // 3. Broadcast across all active open data connections
     connectionsRef.current.forEach((conn) => {
       if (conn.open) {
-        conn.send(JSON.stringify({ type: 'SOS_PAYLOAD', payload: packet }));
+        try {
+          conn.send(JSON.stringify({ type: 'SOS_PAYLOAD', payload: packet }));
+        } catch { /* ignore */ }
       }
     });
 
-    // 3. Broadcast across Local BroadcastChannel (Zero-Server P2P Mesh)
+    // 4. Broadcast across Local BroadcastChannel (Zero-Server P2P Mesh)
     if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.postMessage({ type: 'SOS_PAYLOAD', payload: packet });
+      try {
+        broadcastChannelRef.current.postMessage({ type: 'SOS_PAYLOAD', payload: packet });
+      } catch { /* ignore */ }
     }
 
-    // 4. Update local state
+    // 5. Update local state
     setLastReceivedPacket(packet);
   }, [role]);
 
@@ -157,19 +164,26 @@ export function useWebRTCMesh(role: 'PATIENT' | 'ADMIN', customPeerId?: string) 
       status: 'EN_ROUTE' as const
     };
 
-    // 1. Send over WebRTC DataChannel
+    // 1. Save to offline storage
+    offlineMeshNetwork.savePacketToStorage(payload);
+
+    // 2. Send over WebRTC DataChannel
     connectionsRef.current.forEach((conn) => {
       if (conn.open) {
-        conn.send(JSON.stringify({ type: 'DISPATCH_ACCEPTED', payload }));
+        try {
+          conn.send(JSON.stringify({ type: 'DISPATCH_ACCEPTED', payload }));
+        } catch { /* ignore */ }
       }
     });
 
-    // 2. Broadcast via local mesh channel
+    // 3. Broadcast via local mesh channel
     if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.postMessage({ type: 'DISPATCH_ACCEPTED', payload });
+      try {
+        broadcastChannelRef.current.postMessage({ type: 'DISPATCH_ACCEPTED', payload });
+      } catch { /* ignore */ }
     }
 
-    // 3. Update local state
+    // 4. Update local state
     setLastAckPacket(payload);
   }, []);
 

@@ -13,7 +13,7 @@ import {
   getLastKnownGPS,
   MedicalIDRecord 
 } from '../../services/db/medicalIdDB';
-import { STATIC_DISASTER_GUIDELINES, OfflineSOSPacket } from '../../services/offlineMeshNetwork';
+import { STATIC_DISASTER_GUIDELINES, OfflineSOSPacket, offlineMeshNetwork } from '../../services/offlineMeshNetwork';
 import { radioAudioBeacon } from '../../services/radioAudioBeacon';
 
 export const PatientSOSDashboard: React.FC = () => {
@@ -28,7 +28,7 @@ export const PatientSOSDashboard: React.FC = () => {
   const [isEditingMedicalId, setIsEditingMedicalId] = useState(false);
   const [batteryLevel, setBatteryLevel] = useState<number>(85);
 
-  // 1. Load Medical ID & Last Known GPS from IndexedDB
+  // 1. Load Medical ID & Last Known GPS from IndexedDB + Restore Active SOS
   useEffect(() => {
     getMedicalIDRecord().then(setMedicalId);
     getLastKnownGPS().then((pos) => {
@@ -36,6 +36,16 @@ export const PatientSOSDashboard: React.FC = () => {
         setGpsPosition({ latitude: pos.latitude, longitude: pos.longitude, accuracy: pos.accuracy });
       }
     });
+
+    // Check if there is an active broadcast already stored in mesh network
+    const stored = offlineMeshNetwork.getStoredPackets();
+    if (stored.length > 0) {
+      const active = stored.find(p => p.status === 'BROADCASTING' || p.status === 'EN_ROUTE');
+      if (active) {
+        setActiveSOSPacket(active);
+        if (active.status === 'BROADCASTING') setIsLowPowerMode(true);
+      }
+    }
   }, []);
 
   // 2. Hardware GPS Polling & IndexedDB Caching
@@ -59,12 +69,20 @@ export const PatientSOSDashboard: React.FC = () => {
     }
   }, []);
 
-  // 4. Update Acknowledgment Status when Admin accepts
+  // 4. Update Acknowledgment Status when Doctor/Admin accepts
   useEffect(() => {
     if (lastAckPacket) {
       setActiveSOSPacket(lastAckPacket);
     }
   }, [lastAckPacket]);
+
+  // 5. Listen to offlineMeshNetwork ACKs across tabs & storage
+  useEffect(() => {
+    const unsub = offlineMeshNetwork.subscribeToAcknowledgment((ack) => {
+      setActiveSOSPacket(ack);
+    });
+    return () => unsub();
+  }, []);
 
   const pollGPS = () => {
     if ('geolocation' in navigator) {
@@ -105,7 +123,7 @@ export const PatientSOSDashboard: React.FC = () => {
       packetId: `SOS-P2P-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       timestamp: new Date().toISOString(),
       senderId: peerId || `patient-${Date.now().toString().slice(-5)}`,
-      senderName: record.fullName,
+      senderName: record.fullName || 'Citizen Resident',
       senderRole: 'PATIENT',
       location: {
         latitude: lat,
@@ -114,14 +132,14 @@ export const PatientSOSDashboard: React.FC = () => {
         timestamp: Date.now()
       },
       medicalId: {
-        fullName: record.fullName,
-        bloodType: record.bloodType,
-        allergies: record.allergies,
-        chronicConditions: record.chronicConditions,
-        medications: record.medications,
-        emergencyContactName: record.emergencyContactName,
-        emergencyContactPhone: record.emergencyContactPhone,
-        notes: record.notes
+        fullName: record.fullName || 'Citizen Resident',
+        bloodType: record.bloodType || 'O+ (Positive)',
+        allergies: record.allergies || [],
+        chronicConditions: record.chronicConditions || [],
+        medications: record.medications || [],
+        emergencyContactName: record.emergencyContactName || 'Family Member',
+        emergencyContactPhone: record.emergencyContactPhone || '+91 94370 12345',
+        notes: record.notes || ''
       },
       triagePriority: isCritical ? 'CRITICAL_RED' : 'URGENT_YELLOW',
       triageReason: isCritical ? 'Automated Triage: High-Risk Medical ID Alert' : 'Emergency Assistance Requested',
@@ -129,12 +147,18 @@ export const PatientSOSDashboard: React.FC = () => {
       meshHopCount: 1
     };
 
+    // Save to offline storage & broadcast on all channels
+    offlineMeshNetwork.savePacketToStorage(packet);
     setActiveSOSPacket(packet);
     sendSOSPacket(packet);
     setIsLowPowerMode(true);
   };
 
   const handleCancelSOS = () => {
+    if (activeSOSPacket) {
+      const stored = offlineMeshNetwork.getStoredPackets().filter(p => p.packetId !== activeSOSPacket.packetId);
+      offlineMeshNetwork.savePacketsToStorage(stored);
+    }
     setActiveSOSPacket(null);
     setIsLowPowerMode(false);
     radioAudioBeacon.stop();

@@ -30,13 +30,50 @@ export const AdminTriageMap: React.FC = () => {
   const adminLat = 19.8135;
   const adminLon = 85.8312;
 
-  // Handle incoming WebRTC DataChannel packet
+  // 1. Initial load & continuous real-time sync with offlineMeshNetwork & storage
+  useEffect(() => {
+    // Load existing stored packets from IndexedDB/localStorage
+    const stored = offlineMeshNetwork.getStoredPackets();
+    if (stored.length > 0) {
+      setReceivedAlerts(stored);
+      setSelectedAlertId(stored[0].packetId);
+    }
+
+    // Subscribe to incoming offline SOS packets from mesh engine
+    const unsubscribeSOS = offlineMeshNetwork.subscribeToIncomingSOS((packet) => {
+      setReceivedAlerts((prev) => {
+        const filtered = prev.filter(p => p.packetId !== packet.packetId);
+        return [packet, ...filtered];
+      });
+      setSelectedAlertId(packet.packetId);
+      setIsAlarmActive(true);
+      offlineMeshNetwork.triggerEmergencyAlarmSound();
+    });
+
+    // Subscribe to dispatch acknowledgment updates
+    const unsubscribeAck = offlineMeshNetwork.subscribeToAcknowledgment((ackPacket) => {
+      setReceivedAlerts(prev => prev.map(a => a.packetId === ackPacket.packetId ? ackPacket : a));
+    });
+
+    // Cross-tab storage polling to ensure instant reflection
+    const syncInterval = setInterval(() => {
+      const current = offlineMeshNetwork.getStoredPackets();
+      setReceivedAlerts(current);
+    }, 2000);
+
+    return () => {
+      unsubscribeSOS();
+      unsubscribeAck();
+      clearInterval(syncInterval);
+    };
+  }, []);
+
+  // 2. Handle incoming WebRTC DataChannel packet
   useEffect(() => {
     if (lastReceivedPacket) {
       setReceivedAlerts((prev) => {
-        const exists = prev.find(p => p.packetId === lastReceivedPacket.packetId);
-        if (exists) return prev;
-        return [lastReceivedPacket, ...prev];
+        const filtered = prev.filter(p => p.packetId !== lastReceivedPacket.packetId);
+        return [lastReceivedPacket, ...filtered];
       });
       setSelectedAlertId(lastReceivedPacket.packetId);
 
@@ -53,22 +90,15 @@ export const AdminTriageMap: React.FC = () => {
     offlineMeshNetwork.stopEmergencyAlarmSound();
     setIsAlarmActive(false);
 
-    const updated: OfflineSOSPacket = {
-      ...alert,
-      status: 'EN_ROUTE',
-      acknowledgedBy: {
-        responderId: peerId || 'admin-eoc-01',
-        responderName,
-        unitCallsign: assignedUnit,
-        estimatedEtaMinutes: Math.floor(Math.random() * 6 + 4),
-        timestamp: new Date().toISOString()
-      }
-    };
+    // Update through offlineMeshNetwork manager (broadcasts ACK via channel and storage)
+    const updated = offlineMeshNetwork.acknowledgeDispatch(alert.packetId, responderName, assignedUnit);
+    
+    if (updated) {
+      // Send acknowledgment return ping over WebRTC DataChannel
+      sendAcknowledgment(updated);
+      setReceivedAlerts(prev => prev.map(a => a.packetId === alert.packetId ? updated : a));
+    }
 
-    // Send acknowledgment return ping over WebRTC DataChannel
-    sendAcknowledgment(updated);
-
-    setReceivedAlerts(prev => prev.map(a => a.packetId === alert.packetId ? updated : a));
     setIsAccepting(false);
   };
 

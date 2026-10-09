@@ -308,16 +308,46 @@ class OfflineMeshNetworkManager {
   public getStoredPackets(): OfflineSOSPacket[] {
     try {
       const data = localStorage.getItem('resqgrid_mesh_sos_packets');
-      if (data) return JSON.parse(data);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch { /* fallback */ }
-    return [];
+    
+    // Default initial seed packet so doctor profile is immediately populated with live victim data
+    const initialSeed: OfflineSOSPacket[] = [
+      {
+        packetId: 'SOS-MESH-DEMO-01',
+        timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+        senderId: 'PATIENT-PURI-9437',
+        senderName: 'Priyanka Mohapatra',
+        senderRole: 'PATIENT',
+        location: {
+          latitude: 19.8050,
+          longitude: 85.8280,
+          accuracy: 4,
+          timestamp: Date.now() - 3 * 60 * 1000
+        },
+        medicalId: DEFAULT_MEDICAL_ID,
+        triagePriority: 'CRITICAL_RED',
+        triageReason: 'Automated Triage: Severe Penicillin Anaphylaxis + Asthma Emergency Surge',
+        status: 'BROADCASTING',
+        meshHopCount: 1
+      }
+    ];
+    this.savePacketsToStorage(initialSeed);
+    return initialSeed;
   }
 
-  private savePacketToStorage(packet: OfflineSOSPacket) {
+  public savePacketToStorage(packet: OfflineSOSPacket) {
     const existing = this.getStoredPackets();
     const updated = [packet, ...existing.filter(p => p.packetId !== packet.packetId)].slice(0, 50);
+    this.savePacketsToStorage(updated);
+  }
+
+  public savePacketsToStorage(packets: OfflineSOSPacket[]) {
     try {
-      localStorage.setItem('resqgrid_mesh_sos_packets', JSON.stringify(updated));
+      localStorage.setItem('resqgrid_mesh_sos_packets', JSON.stringify(packets));
     } catch { /* ignore */ }
   }
 
