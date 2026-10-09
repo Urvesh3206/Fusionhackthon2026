@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e11d48" />
+      <stop offset="100%" stop-color="#be123c" />
+    </linearGradient>
+  </defs>
+  <!-- Background Card -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)" stroke="#334155" stroke-width="8" />
+  
+  <!-- Outer Radio Mesh Pulse Rings -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#e11d48" stroke-width="4" stroke-opacity="0.3" stroke-dasharray="12 12" />
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#e11d48" stroke-width="6" stroke-opacity="0.5" />
+  
+  <!-- Shield Badge -->
+  <path d="M 256 90 L 390 145 C 390 280 256 385 256 425 C 256 385 122 280 122 145 Z" fill="url(#shieldGrad)" />
+  
+  <!-- Medical First-Aid Cross -->
+  <path d="M 230 185 H 282 V 230 H 327 V 282 H 282 V 327 H 230 V 282 H 185 V 230 H 230 Z" fill="#ffffff" />
+</svg>

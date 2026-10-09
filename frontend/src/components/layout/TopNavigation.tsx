@@ -9,6 +9,7 @@ import { useEmergencyStore, DEMO_USER_PROFILES } from '../../stores/useEmergency
 import { UserRole } from '../../types';
 import { refreshHazards, fetchAlerts } from '../../services/api';
 import { offlineMeshNetwork } from '../../services/offlineMeshNetwork';
+import { PWAInstallButton } from '../common/PWAInstallButton';
 
 export const TopNavigation: React.FC = () => {
   const location = useLocation();
@@ -149,6 +150,9 @@ export const TopNavigation: React.FC = () => {
           >
             <span>{isFriendly ? '✨ Simple' : '⚡ Tactical'}</span>
           </button>
+
+          {/* Download & Install PWA App */}
+          <PWAInstallButton />
 
           {/* Refresh Button */}
           <button
