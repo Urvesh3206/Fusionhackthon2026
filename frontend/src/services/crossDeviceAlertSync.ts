@@ -144,7 +144,7 @@ class CrossDeviceAlertSyncService {
       } catch { /* ignore */ }
     }
 
-    // Persist to shared backend so Laptop 2 (Admin) receives it over network
+    // Persist to shared backend so Laptop 2 (Admin / Doctor) receives it over network
     try {
       fetch('/api/incidents', {
         method: 'POST',
@@ -159,6 +159,38 @@ class CrossDeviceAlertSyncService {
           required_specialty: 'Trauma Care',
           location_name: 'Puri Sector',
           coordinates: newAlert.location
+        })
+      }).catch(() => {});
+
+      fetch('/api/emergency/sos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packetId: `SOS-MESH-${Date.now()}`,
+          timestamp: newAlert.timestamp,
+          senderId: `USER-${Date.now().toString().slice(-4)}`,
+          senderName: newAlert.sender_name,
+          senderRole: 'PATIENT',
+          location: {
+            latitude: newAlert.location[1],
+            longitude: newAlert.location[0],
+            accuracy: newAlert.location_accuracy_m || 5,
+            timestamp: Date.now()
+          },
+          medicalId: {
+            fullName: newAlert.sender_name,
+            bloodType: 'O-Negative (Universal)',
+            allergies: ['Severe Penicillin Anaphylaxis'],
+            chronicConditions: ['Asthma (Inhaler Required)'],
+            medications: ['Salbutamol 100mcg'],
+            emergencyContactName: 'Family Contact',
+            emergencyContactPhone: newAlert.sender_phone || '+91 94370 12345',
+            notes: newAlert.description
+          },
+          triagePriority: 'CRITICAL_RED',
+          triageReason: newAlert.description,
+          status: 'BROADCASTING',
+          meshHopCount: 1
         })
       }).catch(() => {});
     } catch { /* offline fallback */ }

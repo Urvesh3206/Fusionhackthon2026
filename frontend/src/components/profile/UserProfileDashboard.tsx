@@ -11,6 +11,7 @@ import { useEmergencyStore } from '../../stores/useEmergencyStore';
 import { crossDeviceAlertSync, CitizenSOSAlert } from '../../services/crossDeviceAlertSync';
 import { communicationManager } from '../../services/communication/CommunicationManager';
 import { EmergencyType } from '../../services/communication/types';
+import { offlineMeshNetwork } from '../../services/offlineMeshNetwork';
 import { 
   getRealGPSPosition, 
   watchRealGPS, 
@@ -228,6 +229,16 @@ export const UserProfileDashboard: React.FC = () => {
         location_accuracy_m: accuracy,
         channel: 'MULTI_CHANNEL'
       });
+
+      // A2. Broadcast on offlineMeshNetwork & cross-device backend
+      try {
+        offlineMeshNetwork.broadcastSOS(
+          { latitude: lat, longitude: lon, accuracy: accuracy || 5 },
+          fullDescription
+        );
+      } catch (meshErr) {
+        console.warn('[User Dashboard] Mesh SOS broadcast fallback:', meshErr);
+      }
 
       // B. Dispatch to multi-channel communication manager & outbox
       try {

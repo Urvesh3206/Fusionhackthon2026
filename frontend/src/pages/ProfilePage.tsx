@@ -14,6 +14,7 @@ import { crossDeviceAlertSync, CitizenSOSAlert } from '../services/crossDeviceAl
 import { communicationManager } from '../services/communication/CommunicationManager';
 import { getRealGPSPosition, RealGPSPosition } from '../services/offlineGPS';
 import { radioAudioBeacon } from '../services/radioAudioBeacon';
+import { offlineMeshNetwork, OfflineSOSPacket } from '../services/offlineMeshNetwork';
 import { UserProfileDashboard } from '../components/profile/UserProfileDashboard';
 
 export const ProfilePage: React.FC = () => {
@@ -34,8 +35,9 @@ export const ProfilePage: React.FC = () => {
   const [triageAccepted, setTriageAccepted] = useState<Record<string, boolean>>({});
   const [replanTriggered, setReplanTriggered] = useState(false);
 
-  // Cross-device alert state
+  // Cross-device alert & offline mesh state
   const [incomingAlerts, setIncomingAlerts] = useState<CitizenSOSAlert[]>([]);
+  const [liveSOSPackets, setLiveSOSPackets] = useState<OfflineSOSPacket[]>(() => offlineMeshNetwork.getStoredPackets());
   const [lastDispatchedAlertId, setLastDispatchedAlertId] = useState<string | null>(null);
   const [gpsPosition, setGpsPosition] = useState<RealGPSPosition | null>(null);
   const [copiedTunnelCmd, setCopiedTunnelCmd] = useState(false);
@@ -46,10 +48,21 @@ export const ProfilePage: React.FC = () => {
       setIncomingAlerts(alerts);
     });
 
+    const updateSOS = () => setLiveSOSPackets(offlineMeshNetwork.getStoredPackets());
+    updateSOS();
+    const unsubSOS = offlineMeshNetwork.subscribeToIncomingSOS(updateSOS);
+    const unsubAck = offlineMeshNetwork.subscribeToAcknowledgment(updateSOS);
+    const interval = setInterval(updateSOS, 2000);
+
     // Acquire GPS position
     getRealGPSPosition(5000).then(pos => setGpsPosition(pos)).catch(() => {});
 
-    return unsub;
+    return () => {
+      unsub();
+      unsubSOS();
+      unsubAck();
+      clearInterval(interval);
+    };
   }, []);
 
   // Helper for role metadata
@@ -489,38 +502,83 @@ export const ProfilePage: React.FC = () => {
                   <h3 className="font-bold text-base text-slate-100">Inbound Triage Queue</h3>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold">
-                  2 En Route
+                  {liveSOSPackets.length} Live Packets
                 </span>
               </div>
 
-              <div className="space-y-2.5">
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-xs font-bold text-rose-400 block">RED Priority: Severe Head Trauma</span>
-                      <span className="text-[10px] text-slate-400 font-mono">AMB-108-PURI-01 &bull; ETA 4 min</span>
-                    </div>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300">
-                      ALS Unit
-                    </span>
+              <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                {liveSOSPackets.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                    No active inbound patient emergency calls currently.
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setTriageAccepted(prev => ({ ...prev, p1: true }))}
-                      className={`flex-1 py-1 rounded text-[11px] font-semibold transition ${
-                        triageAccepted.p1 ? 'bg-emerald-600 text-white' : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
-                      }`}
-                    >
-                      {triageAccepted.p1 ? '✓ Bed Reserved' : 'Accept to ICU'}
-                    </button>
-                    <button
-                      onClick={() => navigate('/dispatch')}
-                      className="px-2 py-1 rounded text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300"
-                    >
-                      Reroute
-                    </button>
-                  </div>
-                </div>
+                ) : (
+                  liveSOSPackets.map((sos) => {
+                    const isEnRoute = sos.status === 'EN_ROUTE' || triageAccepted[sos.packetId];
+                    const isCrit = sos.triagePriority === 'CRITICAL_RED';
+
+                    return (
+                      <div
+                        key={sos.packetId}
+                        className={`p-3 rounded-xl border space-y-2 transition-all ${
+                          isEnRoute 
+                            ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-100' 
+                            : isCrit
+                            ? 'bg-rose-950/30 border-rose-500/50'
+                            : 'bg-slate-950 border-slate-800'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className={`text-xs font-bold block ${isCrit ? 'text-rose-400' : 'text-amber-400'}`}>
+                              {isCrit ? '🚨 CRITICAL RED' : '⚡ URGENT'}: {sos.senderName}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Blood: {sos.medicalId.bloodType} &bull; {new Date(sos.timestamp).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            isEnRoute ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                          }`}>
+                            {isEnRoute ? 'DISPATCHED' : 'BROADCASTING'}
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-slate-300 leading-tight line-clamp-2">
+                          {sos.triageReason}
+                        </p>
+
+                        <div className="flex gap-2 pt-1">
+                          {isEnRoute ? (
+                            <div className="flex-1 py-1 text-center rounded text-[11px] font-bold bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 flex items-center justify-center gap-1">
+                              <Check className="w-3 h-3" />
+                              <span>Ambulance En Route</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setTriageAccepted(prev => ({ ...prev, [sos.packetId]: true }));
+                                offlineMeshNetwork.acknowledgeDispatch(
+                                  sos.packetId,
+                                  currentUser.full_name || 'Dr. Subrat Mishra',
+                                  'ALS Ambulance Unit #04'
+                                );
+                              }}
+                              className="flex-1 py-1.5 rounded text-[11px] font-bold transition bg-emerald-600 hover:bg-emerald-500 text-white shadow"
+                            >
+                              Accept & Dispatch ALS
+                            </button>
+                          )}
+                          <button
+                            onClick={() => navigate('/radio-sos')}
+                            className="px-2.5 py-1 rounded text-[11px] bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700"
+                          >
+                            Open Radar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
