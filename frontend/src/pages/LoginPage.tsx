@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   ShieldAlert, LogIn, CheckCircle, Lock, User, ArrowRight, 
   Shield, Users, Phone, Navigation, Award, Stethoscope, Sparkles,
@@ -93,46 +93,64 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        {/* 1. Profile Portal Selection Tabs */}
-        <div className="grid grid-cols-3 gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
-          <button
-            type="button"
-            onClick={() => handlePortalSwitch('citizen')}
-            className={`py-2.5 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
-              selectedPortal === 'citizen'
-                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>1. User (Patient)</span>
-          </button>
+        {/* 1. Profile Portal Selection Tabs & Dedicated Page Links */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold px-1">
+            <span>Select Profile Portal:</span>
+            <span className="text-cyan-400">Direct Dedicated URL Pages Available</span>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => handlePortalSwitch('doctor')}
-            className={`py-2.5 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
-              selectedPortal === 'doctor'
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Stethoscope className="w-3.5 h-3.5" />
-            <span>2. Doctor (Hospital)</span>
-          </button>
+          <div className="grid grid-cols-3 gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => handlePortalSwitch('citizen')}
+              className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                selectedPortal === 'citizen'
+                  ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>1. User (Patient)</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => handlePortalSwitch('admin')}
-            className={`py-2.5 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
-              selectedPortal === 'admin'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span>3. Admin (EOC)</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => handlePortalSwitch('doctor')}
+              className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                selectedPortal === 'doctor'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              <Stethoscope className="w-3.5 h-3.5" />
+              <span>2. Doctor (Hospital)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handlePortalSwitch('admin')}
+              className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                selectedPortal === 'admin'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>3. Admin (EOC)</span>
+            </button>
+          </div>
+
+          {/* Direct Link to the Dedicated Standalone Page */}
+          <div className="text-center pt-1">
+            <Link
+              to={selectedPortal === 'citizen' ? '/login/citizen' : selectedPortal === 'doctor' ? '/login/doctor' : '/login/admin'}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-400 hover:text-cyan-300 underline"
+            >
+              <span>Open Dedicated Full-Screen Page for this Profile</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         {/* Portal Credentials Card */}
