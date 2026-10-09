@@ -1,0 +1,25 @@
+{
+  "name": "ResQGrid AI — Emergency Response",
+  "short_name": "ResQGrid",
+  "description": "Climate-Aware Offline-First Emergency Response & Dispatch System with Radio Frequency SOS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060911",
+  "theme_color": "#06b6d4",
+  "orientation": "any",
+  "categories": ["medical", "utilities", "navigation"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

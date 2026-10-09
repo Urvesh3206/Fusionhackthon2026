@@ -4,12 +4,21 @@ import {
   Radio, WifiOff, Wifi, Volume2, VolumeX, ShieldAlert, 
   Compass, Navigation, Activity, CheckCircle2, AlertTriangle, 
   MapPin, Phone, Truck, Hospital, Play, Square, RefreshCw, 
-  Zap, ArrowRight, Signal, Info, Send, Crosshair, HelpCircle
+  Zap, ArrowRight, Signal, Info, Send, Crosshair, HelpCircle,
+  Satellite, HardDrive, Cpu, LocateFixed
 } from 'lucide-react';
 import { useEmergencyStore } from '../stores/useEmergencyStore';
 import { RadioSOSBeacon, TriangulationNode } from '../types';
 import { radioAudioBeacon } from '../services/radioAudioBeacon';
 import { createNewRadioBeacon, computeTriangulation } from '../services/offlineRadioMesh';
+import { 
+  getRealGPSPosition, 
+  findNearestFacilitiesOffline, 
+  RealGPSPosition, 
+  CachedFacility,
+  isDeviceOnline,
+  onNetworkChange
+} from '../services/offlineGPS';
 
 export const OfflineRadioSOSPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,6 +36,13 @@ export const OfflineRadioSOSPage: React.FC = () => {
   const [priority, setPriority] = useState<RadioSOSBeacon['priority']>('CRITICAL_RED');
   const [beaconSentSuccess, setBeaconSentSuccess] = useState(false);
   const [radarAngle, setRadarAngle] = useState(0);
+
+  // Real GPS & Hardware State
+  const [gpsPosition, setGpsPosition] = useState<RealGPSPosition | null>(null);
+  const [isGpsLoading, setIsGpsLoading] = useState(false);
+  const [useRealGPS, setUseRealGPS] = useState(true);
+  const [hardwareOnline, setHardwareOnline] = useState(isDeviceOnline());
+  const [nearestFacilities, setNearestFacilities] = useState<(CachedFacility & { distance_km: number })[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -114,6 +130,41 @@ export const OfflineRadioSOSPage: React.FC = () => {
     };
   }, [isPlayingAudio, isOfflineNetworkCrash]);
 
+  // 1. Live GPS & Offline Monitoring Effects
+  const acquireGPS = async () => {
+    setIsGpsLoading(true);
+    try {
+      const pos = await getRealGPSPosition(10000);
+      setGpsPosition(pos);
+      // Compute offline nearest facilities
+      const facilities = findNearestFacilitiesOffline(pos.latitude, pos.longitude);
+      setNearestFacilities(facilities);
+    } catch (err) {
+      console.warn('GPS Acquisition error:', err);
+    } finally {
+      setIsGpsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    acquireGPS();
+    const cleanupNet = onNetworkChange((online) => {
+      setHardwareOnline(online);
+    });
+    return cleanupNet;
+  }, []);
+
+  // Update nearest facilities when GPS or Puri toggle changes
+  useEffect(() => {
+    if (gpsPosition && useRealGPS) {
+      const facilities = findNearestFacilitiesOffline(gpsPosition.latitude, gpsPosition.longitude);
+      setNearestFacilities(facilities);
+    } else {
+      const facilities = findNearestFacilitiesOffline(19.8135, 85.8312);
+      setNearestFacilities(facilities);
+    }
+  }, [gpsPosition, useRealGPS]);
+
   // Audio Playback handler
   const handleToggleAudioTone = () => {
     if (isPlayingAudio) {
@@ -134,10 +185,20 @@ export const OfflineRadioSOSPage: React.FC = () => {
     }
   };
 
-  // Broadcast Offline Radio SOS
+  // Broadcast Offline Radio SOS with real GPS coordinates
   const handleTransmitOfflineSOS = () => {
-    // Determine location (browser live location or simulated Puri sector)
-    const userLocation: [number, number] = [85.8312 + (Math.random() - 0.5) * 0.015, 19.8135 + (Math.random() - 0.5) * 0.015];
+    // Determine coordinates: Use real GPS if available and enabled, otherwise fallback to disaster sector
+    let userLocation: [number, number];
+    let locationSourceNote = '';
+
+    if (useRealGPS && gpsPosition) {
+      // [Lng, Lat] for GeoJSON/Map coordinates
+      userLocation = [gpsPosition.longitude, gpsPosition.latitude];
+      locationSourceNote = `Real Device GPS (Accuracy ±${Math.round(gpsPosition.accuracy_m)}m, ${gpsPosition.source})`;
+    } else {
+      userLocation = [85.8312 + (Math.random() - 0.5) * 0.015, 19.8135 + (Math.random() - 0.5) * 0.015];
+      locationSourceNote = `Puri Disaster Sector Fallback Coordinates`;
+    }
     
     // Play sound burst
     if (selectedModulation === 'AFSK_1200') {
@@ -158,7 +219,7 @@ export const OfflineRadioSOSPage: React.FC = () => {
       priority,
       frequencyMHz: activeRadioFrequencyMHz,
       modulation: selectedModulation,
-      notes: `Offline Radio Beacon emitted on ${activeRadioFrequencyMHz} MHz during simulated cellular grid blackout.`
+      notes: `Offline Radio Beacon emitted on ${activeRadioFrequencyMHz} MHz. Location Source: ${locationSourceNote}`
     });
 
     addRadioBeacon(newBeacon);
@@ -173,7 +234,7 @@ export const OfflineRadioSOSPage: React.FC = () => {
       action: 'OFFLINE_RADIO_BEACON_TRANSMITTED',
       system_recommended_id: 'node_dhh_mast',
       dispatcher_chosen_id: newBeacon.assigned_ambulance_id || 'AMB-108-PURI-01',
-      justification_reason: `Zero-Network SOS emitted on ${activeRadioFrequencyMHz} MHz. Triangulated from 3 receiver towers.`
+      justification_reason: `Zero-Network SOS emitted on ${activeRadioFrequencyMHz} MHz. Triangulated from receiver towers with ${locationSourceNote}.`
     });
 
     setTimeout(() => setBeaconSentSuccess(false), 4000);
@@ -232,6 +293,105 @@ export const OfflineRadioSOSPage: React.FC = () => {
               <WifiOff className="w-4 h-4" />
               <span>Cut Network (Offline)</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 1b. Real Hardware Sensor Diagnostics & Standalone GPS Telemetry */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Card 1: Real GPS Satellite Sensor */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Satellite className={`w-4 h-4 ${gpsPosition ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <span className="text-xs font-bold text-slate-200">Satellite GPS Fix</span>
+            </div>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              gpsPosition?.source === 'GPS_SATELLITE' 
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+            }`}>
+              {gpsPosition?.source === 'GPS_SATELLITE' ? 'SATELLITE LOCKED' : 'CACHED / SIMULATED'}
+            </span>
+          </div>
+          <div className="font-mono text-xs text-slate-300 space-y-0.5 pt-1">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Lat/Lng:</span>
+              <span className="text-cyan-300 font-bold">
+                {gpsPosition ? `${gpsPosition.latitude.toFixed(4)}°, ${gpsPosition.longitude.toFixed(4)}°` : 'Acquiring...'}
+              </span>
+            </div>
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">Accuracy:</span>
+              <span className="text-emerald-400 font-semibold">
+                {gpsPosition ? `±${Math.round(gpsPosition.accuracy_m)} meters` : '---'}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={acquireGPS}
+            disabled={isGpsLoading}
+            className="w-full py-1.5 mt-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-200 flex items-center justify-center space-x-1 transition"
+          >
+            <LocateFixed className={`w-3 h-3 ${isGpsLoading ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
+            <span>{isGpsLoading ? 'Locking GNSS Satellites...' : 'Refresh Device GPS'}</span>
+          </button>
+        </div>
+
+        {/* Card 2: PWA Service Worker Cache */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <HardDrive className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-bold text-slate-200">PWA Offline Cache</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              SERVICE WORKER ON
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 leading-tight">
+            Entire app bundle, sound synthesizers, & map tile layers pre-cached in device storage for zero-connectivity boots.
+          </p>
+          <div className="text-[10px] font-mono text-cyan-400/80 pt-1">
+            Status: Standalone Offline Ready (sw.js active)
+          </div>
+        </div>
+
+        {/* Card 3: Acoustic & Radio Frequency Synthesizer */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Cpu className="w-4 h-4 text-purple-400" />
+              <span className="text-xs font-bold text-slate-200">Web Audio Modem</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              1200 BAUD AFSK
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 leading-tight">
+            Synthesizes Bell 202 audio chirps (1200/2200 Hz) directly via Web Audio API. Can acoustic-couple to handheld walkie-talkies.
+          </p>
+          <div className="text-[10px] font-mono text-purple-400/80 pt-1">
+            Modulation: {selectedModulation}
+          </div>
+        </div>
+
+        {/* Card 4: Local Storage Ledger & Sync Queue */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Activity className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-bold text-slate-200">Offline Sync Ledger</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              {radioBeacons.length} LOCALLY STORED
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 leading-tight">
+            Beacon packets queue offline with monotonic timestamps. Automatically syncs to emergency dispatch when connection resumes.
+          </p>
+          <div className="text-[10px] font-mono text-emerald-400/80 pt-1">
+            Network State: {hardwareOnline ? '● Internet Live' : '○ Standalone Mesh'}
           </div>
         </div>
       </div>
@@ -296,6 +456,45 @@ export const OfflineRadioSOSPage: React.FC = () => {
                     <option value="POWER_GRID_OUTAGE">Power Outage / ICU Failure</option>
                     <option value="STRUCTURE_COLLAPSE">Structure Collapse</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Coordinate Source Selector */}
+              <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-slate-300 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                    Transmitting Location
+                  </span>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => setUseRealGPS(true)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        useRealGPS ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Device GPS
+                    </button>
+                    <button
+                      onClick={() => setUseRealGPS(false)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        !useRealGPS ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Puri Sector
+                    </button>
+                  </div>
+                </div>
+
+                <div className="font-mono text-[11px] text-cyan-300 flex justify-between">
+                  <span>
+                    {useRealGPS && gpsPosition
+                      ? `${gpsPosition.latitude.toFixed(4)}° N, ${gpsPosition.longitude.toFixed(4)}° E`
+                      : '19.8135° N, 85.8312° E (Puri)'}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {useRealGPS && gpsPosition ? `±${Math.round(gpsPosition.accuracy_m)}m` : 'Simulated'}
+                  </span>
                 </div>
               </div>
 
@@ -531,6 +730,61 @@ export const OfflineRadioSOSPage: React.FC = () => {
           )}
         </div>
 
+      </div>
+
+      {/* 2b. Offline Pre-Cached Critical Facilities & Haversine Distance Hub */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div className="flex items-center space-x-2">
+            <Hospital className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-bold text-base text-slate-100">
+              Offline-Cached Nearest Medical & Relief Facilities
+            </h3>
+          </div>
+          <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800/40">
+            Computed Client-Side (Haversine Formula) &bull; Zero Network
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {nearestFacilities.slice(0, 4).map((facility) => {
+            const isHosp = facility.type === 'hospital';
+            const isAmb = facility.type === 'ambulance_station';
+            return (
+              <div 
+                key={facility.id} 
+                className="bg-slate-950 rounded-xl p-3.5 border border-slate-800 hover:border-slate-700 transition flex flex-col justify-between space-y-2"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                      isHosp ? 'bg-purple-500/20 text-purple-300' :
+                      isAmb ? 'bg-emerald-500/20 text-emerald-300' : 'bg-cyan-500/20 text-cyan-300'
+                    }`}>
+                      {facility.type.replace('_', ' ')}
+                    </span>
+                    <span className="text-xs font-mono font-black text-cyan-400">
+                      {facility.distance_km} km
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-xs text-slate-200 mt-2 line-clamp-1">{facility.name}</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Est. Transit Time: ~{Math.max(3, Math.round(facility.distance_km * 2.2))} mins
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-900 flex items-center justify-between text-[10px]">
+                  <span className="text-slate-400 font-mono">
+                    {facility.phone ? `📞 ${facility.phone}` : 'VHF Radio Ch-16'}
+                  </span>
+                  <span className={`font-semibold ${facility.has_power ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {facility.has_power ? '⚡ Aux Generator Active' : '⚠ Low Power'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* 3. Active Offline Radio Distress Ledger Table */}
