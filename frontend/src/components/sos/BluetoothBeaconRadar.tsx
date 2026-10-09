@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   Bluetooth, Radio, RefreshCw, Smartphone, ShieldCheck, 
   Signal, WifiOff, AlertTriangle, CheckCircle2, Battery,
-  Compass, Zap, Locate
+  Compass, Zap, Locate, Send, Cpu, Check
 } from 'lucide-react';
 import { 
   bluetoothBeaconService, 
-  BluetoothBeaconDevice 
+  BluetoothBeaconDevice,
+  HardwareGATTTransferResult 
 } from '../../services/bluetoothBeaconService';
 import { offlineMeshNetwork } from '../../services/offlineMeshNetwork';
 
@@ -30,7 +31,8 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
   const [isAdvertising, setIsAdvertising] = useState(false);
   const [isWebBtSupported, setIsWebBtSupported] = useState(bluetoothBeaconService.isWebBluetoothSupported());
   const [pairingLoading, setPairingLoading] = useState(false);
-  const [pairMessage, setPairMessage] = useState<string | null>(null);
+  const [hardwareResult, setHardwareResult] = useState<HardwareGATTTransferResult | null>(null);
+  const [pairError, setPairError] = useState<string | null>(null);
 
   useEffect(() => {
     bluetoothBeaconService.startScanner();
@@ -61,14 +63,29 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
 
   const handlePairRealHardware = async () => {
     setPairingLoading(true);
-    setPairMessage(null);
+    setPairError(null);
+    setHardwareResult(null);
+
     try {
-      const dev = await bluetoothBeaconService.requestHardwareBluetoothDevice();
-      if (dev) {
-        setPairMessage(`Connected to hardware Bluetooth device: ${dev.name}`);
-      }
+      const result = await bluetoothBeaconService.connectAndTransmitHardwareBLE({
+        patientName: victimName,
+        bloodType,
+        lat,
+        lon,
+        triageReason: 'Automated Triage: Severe Penicillin Anaphylaxis + Asthma'
+      });
+
+      setHardwareResult(result);
+
+      // Also broadcast to in-memory mesh
+      try {
+        offlineMeshNetwork.broadcastSOS(
+          { latitude: lat, longitude: lon, accuracy: 2 },
+          `Hardware BLE Direct Transfer: ${victimName} (${bloodType}) via ${result.deviceName}`
+        );
+      } catch { /* ignore */ }
     } catch (e: any) {
-      setPairMessage(e.message || 'Bluetooth pair request cancelled');
+      setPairError(e.message || 'Bluetooth hardware pairing was cancelled.');
     } finally {
       setPairingLoading(false);
     }
@@ -102,10 +119,11 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
             <button
               onClick={handlePairRealHardware}
               disabled={pairingLoading}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition flex items-center space-x-1.5"
+              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-indigo-600/30"
+              title="Opens real browser OS Bluetooth pairing to connect to nearby physical Bluetooth device"
             >
-              <Bluetooth className="w-3.5 h-3.5" />
-              <span>{pairingLoading ? 'Scanning...' : 'Pair Web Bluetooth'}</span>
+              <Bluetooth className={`w-3.5 h-3.5 ${pairingLoading ? 'animate-spin' : ''}`} />
+              <span>{pairingLoading ? 'Scanning Hardware Radio...' : 'Pair Real Bluetooth Hardware'}</span>
             </button>
           )}
 
@@ -115,7 +133,7 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow ${
                 isAdvertising 
                   ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse' 
-                  : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                  : 'bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30'
               }`}
             >
               <Radio className="w-3.5 h-3.5" />
@@ -140,10 +158,31 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
         </div>
       </div>
 
-      {pairMessage && (
-        <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-[11px] text-indigo-200 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-          <span>{pairMessage}</span>
+      {/* Hardware Connection Result Banner */}
+      {hardwareResult && (
+        <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-200 space-y-1.5 animate-in fade-in">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-white flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Hardware Bluetooth Direct Link Established</span>
+            </span>
+            <span className="text-[10px] font-mono text-emerald-400">
+              {hardwareResult.timestamp}
+            </span>
+          </div>
+          <p className="text-[11px] text-emerald-300">{hardwareResult.message}</p>
+          <div className="flex items-center gap-3 pt-1 text-[10px] font-mono text-slate-400 border-t border-emerald-500/20">
+            <span>Target: <strong>{hardwareResult.deviceName}</strong></span>
+            <span>Payload: <strong>{hardwareResult.bytesTransmitted} bytes</strong></span>
+            <span>Protocol: <strong>BLE GATT 2.4 GHz</strong></span>
+          </div>
+        </div>
+      )}
+
+      {pairError && (
+        <div className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-[11px] text-amber-200 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <span>{pairError}</span>
         </div>
       )}
 
@@ -160,13 +199,16 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[260px] overflow-y-auto pr-1">
           {beacons.map((beacon) => {
             const isSOS = beacon.beaconType === 'IBEACON_SOS';
+            const isHardware = beacon.beaconType === 'HARDWARE_BLE_DEVICE';
             const isVeryClose = beacon.distanceMeters < 5;
 
             return (
               <div
                 key={beacon.id}
                 className={`p-3 rounded-xl border transition-all ${
-                  isSOS 
+                  isHardware
+                    ? 'bg-emerald-950/30 border-emerald-500/60 shadow-md shadow-emerald-500/10'
+                    : isSOS 
                     ? 'bg-rose-950/30 border-rose-500/50 shadow-md shadow-rose-500/10' 
                     : 'bg-slate-950 border-slate-800'
                 }`}
@@ -174,7 +216,7 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-2">
                     <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                      isSOS ? 'bg-rose-600 text-white' : 'bg-slate-800 text-indigo-400'
+                      isHardware ? 'bg-emerald-600 text-white' : isSOS ? 'bg-rose-600 text-white' : 'bg-slate-800 text-indigo-400'
                     }`}>
                       <Bluetooth className="w-3.5 h-3.5" />
                     </div>
@@ -185,7 +227,7 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
                   </div>
 
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    isVeryClose ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-300'
+                    isHardware ? 'bg-emerald-500/20 text-emerald-300' : isVeryClose ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-300'
                   }`}>
                     ~{beacon.distanceMeters}m ({beacon.rssi} dBm)
                   </span>
@@ -198,7 +240,7 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
                 )}
 
                 <div className="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
-                  <span>Type: {beacon.beaconType.replace('_', ' ')}</span>
+                  <span>Type: {beacon.beaconType.replace(/_/g, ' ')}</span>
                   <span>Battery: {beacon.batteryLevel || 90}%</span>
                 </div>
               </div>
