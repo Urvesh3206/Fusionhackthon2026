@@ -8,6 +8,7 @@ import {
   bluetoothBeaconService, 
   BluetoothBeaconDevice 
 } from '../../services/bluetoothBeaconService';
+import { offlineMeshNetwork } from '../../services/offlineMeshNetwork';
 
 interface BluetoothBeaconRadarProps {
   role?: 'PATIENT' | 'ADMIN' | 'DOCTOR';
@@ -49,6 +50,12 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
     } else {
       bluetoothBeaconService.startBeaconAdvertising(victimName, bloodType, lat, lon);
       setIsAdvertising(true);
+      try {
+        offlineMeshNetwork.broadcastSOS(
+          { latitude: lat, longitude: lon, accuracy: 4 },
+          `BIN Bluetooth 2.4 GHz Beacon: ${victimName} (${bloodType}) - Offline Distress Pulse`
+        );
+      } catch { /* offline fallback */ }
     }
   };
 
