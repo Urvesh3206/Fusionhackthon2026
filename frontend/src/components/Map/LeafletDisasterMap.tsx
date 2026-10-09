@@ -57,11 +57,32 @@ interface DisasterMapProps {
   onRouteBetween?: (origin: [number, number], destination: [number, number]) => void;
 }
 
-function MapViewController({ center, zoom }: { center: [number, number]; zoom: number }) {
+function MapViewController({ 
+  center, 
+  zoom, 
+  clickedPoint, 
+  selectedRoute 
+}: { 
+  center: [number, number]; 
+  zoom: number; 
+  clickedPoint?: [number, number] | null;
+  selectedRoute?: [number, number][];
+}) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, zoom);
-  }, [center, zoom, map]);
+    if (selectedRoute && selectedRoute.length > 1) {
+      try {
+        const bounds = L.latLngBounds(selectedRoute.map(pt => [pt[1], pt[0]]));
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
+      } catch (err) {
+        console.warn('fitBounds error:', err);
+      }
+    } else if (clickedPoint) {
+      map.flyTo(clickedPoint, 13, { duration: 1.2 });
+    } else {
+      map.setView(center, zoom);
+    }
+  }, [center, zoom, clickedPoint, selectedRoute, map]);
   return null;
 }
 
@@ -177,7 +198,12 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
         style={{ width: '100%', height: '100%' }}
         className="z-0"
       >
-        <MapViewController center={defaultCenter} zoom={11} />
+        <MapViewController 
+          center={defaultCenter} 
+          zoom={11} 
+          clickedPoint={clickedPoint} 
+          selectedRoute={selectedRoute} 
+        />
         <MapClickHandler onMapClick={onMapClick} />
         
         {/* Free Dark Canvas Basemap (Zero API key required) */}
