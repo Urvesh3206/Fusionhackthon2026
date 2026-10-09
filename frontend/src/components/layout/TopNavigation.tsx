@@ -166,31 +166,38 @@ export const TopNavigation: React.FC = () => {
                 </div>
 
                 <div className="p-1">
-                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Switch User Role
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Select Active Profile
                   </div>
-                  {Object.values(DEMO_USER_PROFILES).map((profile) => (
-                    <button
-                      key={profile.role}
-                      onClick={() => {
-                        switchRole(profile.role);
-                        setRoleDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition ${
-                        currentUser.role === profile.role
-                          ? 'bg-indigo-50 text-indigo-700 font-bold'
-                          : 'text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-semibold">{profile.full_name}</span>
-                        <span className="text-[10px] text-slate-400 capitalize">{profile.role.replace('_', ' ').toLowerCase()}</span>
-                      </div>
-                      {currentUser.role === profile.role && (
-                        <CheckCircle className="w-4 h-4 text-indigo-600" />
-                      )}
-                    </button>
-                  ))}
+                  {[
+                    { role: 'citizen' as UserRole, name: '1. User Profile (Patient / Citizen)', desc: 'Emergency SOS, Medical ID & Safe Map', badge: 'User Only' },
+                    { role: 'doctor' as UserRole, name: '2. Doctor Profile (Hospital & Medical)', desc: 'Hospital Beds, ICU & Patient Triage', badge: 'Doctor' },
+                    { role: 'admin' as UserRole, name: '3. Admin Profile (EOC Command)', desc: 'Full Master Access & Operations', badge: 'Admin Master' }
+                  ].map((p) => {
+                    const isCur = currentUser.role === p.role;
+                    return (
+                      <button
+                        key={p.role}
+                        onClick={() => {
+                          switchRole(p.role);
+                          setRoleDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center justify-between transition ${
+                          isCur
+                            ? 'bg-indigo-50 text-indigo-700 font-bold shadow-xs'
+                            : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="flex flex-col pr-2">
+                          <span className="font-semibold text-slate-900">{p.name}</span>
+                          <span className="text-[10px] text-slate-500">{p.desc}</span>
+                        </div>
+                        {isCur && (
+                          <CheckCircle className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="pt-1 border-t border-slate-100">

@@ -25,28 +25,51 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
   const totalAmbs = state?.ambulances.length || 0;
   const deratedHospitals = state?.hospitals.filter(h => !h.has_power || h.free_icu_beds === 0).length || 0;
 
-  // 6 Core Essential, Easy-to-Understand Menu Items
-  const primaryNavItems = [
-    { to: '/', label: 'Dashboard', icon: LayoutDashboard, badge: null },
-    { to: '/map', label: 'Live Map', icon: Map, badge: 'Live GPS', badgeColor: 'bg-emerald-100 text-emerald-800' },
-    { to: '/comms', label: 'Messages & Comms', icon: Signal, badge: 'Online', badgeColor: 'bg-indigo-100 text-indigo-800 font-semibold' },
-    { to: '/incidents', label: 'Emergency Incidents', icon: AlertCircle, badge: activeIncidents > 0 ? `${activeIncidents} Active` : null, badgeColor: 'bg-rose-100 text-rose-700 font-bold' },
-    { to: '/fleet', label: 'Ambulance Fleet', icon: Truck, badge: `${availableAmbs}/${totalAmbs}`, badgeColor: 'bg-emerald-100 text-emerald-800' },
-    { to: '/hospitals', label: 'Hospital Beds', icon: Hospital, badge: deratedHospitals > 0 ? `${deratedHospitals} Alert` : null, badgeColor: 'bg-amber-100 text-amber-800' },
-  ];
+  // Profile-Specific Navigation Items
+  let primaryNavItems: { to: string; label: string; icon: any; badge: string | null; badgeColor?: string }[] = [];
+  let secondaryNavItems: { to: string; label: string; icon: any }[] = [];
 
-  // Secondary Tools (cleanly grouped)
-  const secondaryNavItems = [
-    { to: '/radio-sos', label: 'Offline Radio Mesh', icon: Radio },
-    { to: '/dispatch', label: 'Emergency Dispatch', icon: Send },
-    { to: '/hazards', label: 'Weather & Storm Alerts', icon: Flame },
-    { to: '/resources', label: 'Medical Supplies', icon: Package },
-    { to: '/evacuation', label: 'Evacuation Shelters', icon: Users },
-    { to: '/simulation', label: 'Disaster Simulator', icon: PlaySquare },
-    { to: '/analytics', label: 'Analytics & Reports', icon: BarChart3 },
-    { to: '/alerts', label: 'Notifications', icon: Bell },
-    { to: '/settings', label: 'System Settings', icon: Settings },
-  ];
+  if (currentUser.role === 'citizen') {
+    // 👤 Citizen / Patient Profile Only
+    primaryNavItems = [
+      { to: '/radio-sos', label: '🚨 Emergency SOS', icon: ShieldAlert, badge: '1-Tap', badgeColor: 'bg-rose-100 text-rose-700 font-bold' },
+      { to: '/map', label: 'Safe Map & Shelters', icon: Map, badge: 'Live GPS', badgeColor: 'bg-emerald-100 text-emerald-800' },
+      { to: '/profile', label: 'My Medical ID', icon: User, badge: 'IndexedDB', badgeColor: 'bg-indigo-100 text-indigo-700' },
+      { to: '/comms', label: 'Emergency Comms', icon: Signal, badge: 'Online', badgeColor: 'bg-indigo-100 text-indigo-800' },
+    ];
+  } else if (currentUser.role === 'doctor' || currentUser.role === 'medical_coordinator') {
+    // 🩺 Doctor / Medical Profile Only
+    primaryNavItems = [
+      { to: '/radio-sos', label: 'Patient Triage & SOS', icon: ShieldAlert, badge: 'WebRTC', badgeColor: 'bg-rose-100 text-rose-700 font-bold' },
+      { to: '/hospitals', label: 'Hospital Beds & ICU', icon: Hospital, badge: deratedHospitals > 0 ? `${deratedHospitals} Alert` : 'Active', badgeColor: 'bg-emerald-100 text-emerald-800' },
+      { to: '/fleet', label: 'Ambulance Reception', icon: Truck, badge: `${availableAmbs} Avail`, badgeColor: 'bg-indigo-100 text-indigo-800' },
+      { to: '/map', label: 'Medical Geospatial Map', icon: Map, badge: 'Live GPS', badgeColor: 'bg-emerald-100 text-emerald-800' },
+      { to: '/resources', label: 'Medical Supplies & Blood', icon: Package, badge: null },
+      { to: '/profile', label: 'Doctor Profile', icon: User, badge: null },
+    ];
+  } else {
+    // 🛡️ Admin / EOC Command Profile (All Features)
+    primaryNavItems = [
+      { to: '/', label: 'Operations Dashboard', icon: LayoutDashboard, badge: null },
+      { to: '/map', label: 'Live Map & Tactical Grid', icon: Map, badge: 'Live GPS', badgeColor: 'bg-emerald-100 text-emerald-800' },
+      { to: '/comms', label: 'Messages & Comms', icon: Signal, badge: 'Online', badgeColor: 'bg-indigo-100 text-indigo-800 font-semibold' },
+      { to: '/incidents', label: 'Emergency Incidents', icon: AlertCircle, badge: activeIncidents > 0 ? `${activeIncidents} Active` : null, badgeColor: 'bg-rose-100 text-rose-700 font-bold' },
+      { to: '/fleet', label: 'Ambulance Fleet', icon: Truck, badge: `${availableAmbs}/${totalAmbs}`, badgeColor: 'bg-emerald-100 text-emerald-800' },
+      { to: '/hospitals', label: 'Hospital Beds', icon: Hospital, badge: deratedHospitals > 0 ? `${deratedHospitals} Alert` : null, badgeColor: 'bg-amber-100 text-amber-800' },
+    ];
+
+    secondaryNavItems = [
+      { to: '/radio-sos', label: 'Offline Radio SOS Triage', icon: Radio },
+      { to: '/dispatch', label: 'Emergency Dispatcher', icon: Send },
+      { to: '/hazards', label: 'Weather & Storm Alerts', icon: Flame },
+      { to: '/resources', label: 'Medical Supplies', icon: Package },
+      { to: '/evacuation', label: 'Evacuation Shelters', icon: Users },
+      { to: '/simulation', label: 'Disaster Simulator', icon: PlaySquare },
+      { to: '/analytics', label: 'Analytics & Reports', icon: BarChart3 },
+      { to: '/alerts', label: 'Notifications', icon: Bell },
+      { to: '/settings', label: 'System Settings', icon: Settings },
+    ];
+  }
 
   return (
     <aside className={`h-screen flex flex-col justify-between transition-all duration-300 z-30 select-none ${
