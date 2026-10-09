@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Bell, Search, Radio, RefreshCw, Shield, User,
@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { useEmergencyStore, DEMO_USER_PROFILES } from '../../stores/useEmergencyStore';
 import { UserRole } from '../../types';
-import { refreshHazards } from '../../services/api';
+import { refreshHazards, fetchAlerts } from '../../services/api';
+import { offlineMeshNetwork } from '../../services/offlineMeshNetwork';
 
 export const TopNavigation: React.FC = () => {
   const location = useLocation();
@@ -21,6 +22,35 @@ export const TopNavigation: React.FC = () => {
 
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number>(() => {
+    const sos = offlineMeshNetwork.getStoredPackets().filter(p => p.status === 'BROADCASTING').length;
+    return Math.max(sos, 1);
+  });
+
+  useEffect(() => {
+    const updateCount = async () => {
+      try {
+        const storedSOS = offlineMeshNetwork.getStoredPackets().filter(p => p.status === 'BROADCASTING');
+        const systemAlerts = await fetchAlerts();
+        const unackAlerts = systemAlerts.filter(a => !a.is_acknowledged);
+        setUnreadCount(storedSOS.length + unackAlerts.length);
+      } catch {
+        const storedSOS = offlineMeshNetwork.getStoredPackets().filter(p => p.status === 'BROADCASTING');
+        setUnreadCount(storedSOS.length);
+      }
+    };
+
+    updateCount();
+    const unsubSOS = offlineMeshNetwork.subscribeToIncomingSOS(() => updateCount());
+    const unsubAck = offlineMeshNetwork.subscribeToAcknowledgment(() => updateCount());
+    const interval = setInterval(updateCount, 4000);
+
+    return () => {
+      unsubSOS();
+      unsubAck();
+      clearInterval(interval);
+    };
+  }, []);
 
   // Compute Route Title
   const getPageTitle = () => {
@@ -128,9 +158,11 @@ export const TopNavigation: React.FC = () => {
             aria-label="Toggle notifications"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center bg-rose-500 text-white shadow">
-              3
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center bg-rose-500 text-white shadow animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Emergency SOS Button */}

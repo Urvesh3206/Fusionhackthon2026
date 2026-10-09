@@ -7,6 +7,8 @@ import { useEmergencyStore } from '../../stores/useEmergencyStore';
 import { fetchCurrentState, runOptimizationReplan } from '../../services/api';
 import { initWebSocket } from '../../services/websocket';
 
+import { LiveToastAlert } from './LiveToastAlert';
+
 export const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { setState, setPlan, setConnected, uiThemeMode, currentUser } = useEmergencyStore();
@@ -76,6 +78,9 @@ export const AppLayout: React.FC = () => {
 
       {/* Slide-over Notification Alert Center */}
       <NotificationDrawer />
+
+      {/* Real-Time Live Toast Notification Popup */}
+      <LiveToastAlert />
     </div>
   );
 };
