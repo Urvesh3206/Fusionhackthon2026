@@ -109,7 +109,7 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
             </button>
           )}
 
-          {role === 'PATIENT' && (
+          {role === 'PATIENT' ? (
             <button
               onClick={handleToggleAdvertising}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow ${
@@ -120,6 +120,21 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
             >
               <Radio className="w-3.5 h-3.5" />
               <span>{isAdvertising ? 'Broadcasting BLE Beacon...' : 'Broadcast BLE Beacon'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                const simulatedName = 'Priyanka Mohapatra (Victim Node #02)';
+                bluetoothBeaconService.startBeaconAdvertising(simulatedName, 'O-Negative', 19.8050, 85.8280, true);
+                offlineMeshNetwork.broadcastSOS(
+                  { latitude: 19.8050, longitude: 85.8280, accuracy: 4 },
+                  'Offline BLE Beacon: Severe Penicillin Anaphylaxis Detected via 2.4 GHz Radio'
+                );
+              }}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition flex items-center space-x-1.5 shadow"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Simulate Beacon Pulse</span>
             </button>
           )}
         </div>
