@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Map, Flame, AlertCircle, Send, 
   Truck, Hospital, Package, Users, PlaySquare, 
   BarChart3, Bell, Settings, FileText, LifeBuoy,
-  ChevronLeft, ChevronRight, ShieldAlert, CheckCircle, User
+  ChevronLeft, ChevronRight, ShieldAlert, CheckCircle, User, Radio
 } from 'lucide-react';
 import { useEmergencyStore } from '../../stores/useEmergencyStore';
 
@@ -23,6 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
   const navItems = [
     { to: '/', label: 'Operations Dashboard', icon: LayoutDashboard, badge: null },
     { to: '/map', label: 'Live Disaster Map', icon: Map, badge: null },
+    { to: '/radio-sos', label: 'Offline Radio SOS (RF)', icon: Radio, badge: 'RF MESH', badgeColor: 'bg-red-500/20 text-red-400 font-mono' },
     { to: '/profile', label: 'User Profile & Roles', icon: User, badge: currentUser.role.toUpperCase(), badgeColor: 'bg-cyan-500/20 text-cyan-300' },
     { to: '/hazards', label: 'Hazard Intelligence', icon: Flame, badge: state?.forecast ? state.forecast.step_id : null, badgeColor: 'bg-amber-500/20 text-amber-400' },
     { to: '/incidents', label: 'Emergency Incidents', icon: AlertCircle, badge: activeIncidents > 0 ? `${activeIncidents}` : null, badgeColor: 'bg-red-500/20 text-red-400' },

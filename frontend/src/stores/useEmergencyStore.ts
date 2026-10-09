@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { FullSystemState, OptimizationPlanResponse, OverrideLogEntry, User, UserRole } from '../types';
+import { FullSystemState, OptimizationPlanResponse, OverrideLogEntry, User, UserRole, RadioSOSBeacon } from '../types';
+import { getOfflineBeacons, saveOfflineBeacons } from '../services/offlineRadioMesh';
 
 export const DEMO_USER_PROFILES: Record<UserRole, User> = {
   citizen: {
@@ -95,6 +96,10 @@ interface EmergencyStore {
   showAssumptionsModal: boolean;
   showNotificationsDrawer: boolean;
   globalSearchQuery: string;
+  isOfflineNetworkCrash: boolean;
+  radioBeacons: RadioSOSBeacon[];
+  selectedRadioBeaconId: string | null;
+  activeRadioFrequencyMHz: number;
   
   // Actions
   setCurrentUser: (user: User) => void;
@@ -117,6 +122,11 @@ interface EmergencyStore {
   setShowAssumptionsModal: (show: boolean) => void;
   setShowNotificationsDrawer: (show: boolean) => void;
   setGlobalSearchQuery: (query: string) => void;
+  setOfflineNetworkCrash: (crashed: boolean) => void;
+  addRadioBeacon: (beacon: RadioSOSBeacon) => void;
+  updateRadioBeaconStatus: (id: string, status: RadioSOSBeacon['status']) => void;
+  setSelectedRadioBeacon: (id: string | null) => void;
+  setActiveRadioFrequency: (freq: number) => void;
   addOverride: (entry: OverrideLogEntry) => void;
   setOverrides: (logs: OverrideLogEntry[]) => void;
 }
@@ -218,6 +228,10 @@ export const useEmergencyStore = create<EmergencyStore>((set) => ({
   showAssumptionsModal: false,
   showNotificationsDrawer: false,
   globalSearchQuery: '',
+  isOfflineNetworkCrash: false,
+  radioBeacons: getOfflineBeacons(),
+  selectedRadioBeaconId: null,
+  activeRadioFrequencyMHz: 156.800,
 
   setCurrentUser: (currentUser) => set({ currentUser }),
   switchRole: (role) => {
@@ -247,6 +261,19 @@ export const useEmergencyStore = create<EmergencyStore>((set) => ({
   setShowAssumptionsModal: (showAssumptionsModal) => set({ showAssumptionsModal }),
   setShowNotificationsDrawer: (showNotificationsDrawer) => set({ showNotificationsDrawer }),
   setGlobalSearchQuery: (globalSearchQuery) => set({ globalSearchQuery }),
+  setOfflineNetworkCrash: (isOfflineNetworkCrash) => set({ isOfflineNetworkCrash }),
+  addRadioBeacon: (beacon) => set((s) => {
+    const updated = [beacon, ...s.radioBeacons.filter(b => b.id !== beacon.id)];
+    saveOfflineBeacons(updated);
+    return { radioBeacons: updated, selectedRadioBeaconId: beacon.id };
+  }),
+  updateRadioBeaconStatus: (id, status) => set((s) => {
+    const updated = s.radioBeacons.map(b => b.id === id ? { ...b, status } : b);
+    saveOfflineBeacons(updated);
+    return { radioBeacons: updated };
+  }),
+  setSelectedRadioBeacon: (selectedRadioBeaconId) => set({ selectedRadioBeaconId }),
+  setActiveRadioFrequency: (activeRadioFrequencyMHz) => set({ activeRadioFrequencyMHz }),
   addOverride: (entry) => set((s) => ({ overrides: [entry, ...s.overrides] })),
   setOverrides: (overrides) => set({ overrides })
 }));

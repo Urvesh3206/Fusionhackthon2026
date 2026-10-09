@@ -26,6 +26,7 @@ export const TopNavigation: React.FC = () => {
       case '/':
       case '/dashboard': return 'Operations Dashboard';
       case '/map': return 'Live Disaster Map';
+      case '/radio-sos': return 'Offline Emergency Radio (RF) & RDF Triangulation';
       case '/profile': return 'User Profile & Multi-Role Access Hub';
       case '/hazards': return 'Hazard Intelligence & Forecasts';
       case '/incidents': return 'Emergency Incident Management';

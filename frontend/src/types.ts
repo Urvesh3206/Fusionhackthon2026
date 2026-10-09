@@ -261,6 +261,41 @@ export interface RiskScoreBreakdown {
   weights_applied: Record<string, number>;
 }
 
+export interface TriangulationNode {
+  node_id: string;
+  node_name: string;
+  node_type: 'HOSPITAL_TOWER' | 'AMBULANCE_MOBILE_DF' | 'SHELTER_RELAY';
+  location: [number, number];
+  bearing_deg: number;
+  rssi_dbm: number;
+  distance_estimate_m: number;
+  signal_quality_pct: number;
+}
+
+export interface RadioSOSBeacon {
+  id: string;
+  beacon_code: string;
+  frequency_mhz: number;
+  channel_name: string;
+  modulation: 'AFSK_1200' | 'LORA_CHIRP' | 'VHF_FM' | 'CW_MORSE';
+  timestamp: string;
+  sender_name: string;
+  sender_role: string;
+  location: [number, number];
+  estimated_accuracy_m: number;
+  rssi_dbm: number;
+  snr_db: number;
+  battery_level_pct: number;
+  priority: 'CRITICAL_RED' | 'URGENT_YELLOW' | 'STANDARD_GREEN';
+  emergency_type: 'FLOOD_TRAPPED' | 'MEDICAL_TRAUMA' | 'POWER_GRID_OUTAGE' | 'STRUCTURE_COLLAPSE';
+  status: 'BROADCASTING' | 'TRIANGULATING' | 'AMBULANCE_DISPATCHED' | 'RESCUED';
+  triangulation_nodes: TriangulationNode[];
+  assumed_location: [number, number];
+  triangulation_confidence_pct: number;
+  assigned_ambulance_id?: string;
+  notes?: string;
+}
+
 export interface MedicalResourceItem {
   id: string;
   name: string;
