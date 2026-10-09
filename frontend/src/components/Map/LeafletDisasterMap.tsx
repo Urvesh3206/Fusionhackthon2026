@@ -180,10 +180,11 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
         <MapViewController center={defaultCenter} zoom={11} />
         <MapClickHandler onMapClick={onMapClick} />
         
-        {/* CartoDB Dark Matter Basemap */}
+        {/* Free Dark Canvas Basemap (Zero API key required) */}
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a> & OpenStreetMap contributors'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.esri.com/">Esri</a> & OpenStreetMap contributors'
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+          maxZoom={16}
         />
 
         {/* 1. Road Network & Inundation Closures */}
