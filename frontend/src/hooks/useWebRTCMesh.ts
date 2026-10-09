@@ -153,7 +153,16 @@ export function useWebRTCMesh(role: 'PATIENT' | 'ADMIN', customPeerId?: string) 
       } catch { /* ignore */ }
     }
 
-    // 5. Update local state
+    // 5. Send to shared backend for Cloudflare & cross-device delivery
+    try {
+      fetch('/api/emergency/sos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(packet)
+      }).catch(() => {});
+    } catch { /* offline fallback */ }
+
+    // 6. Update local state
     setLastReceivedPacket(packet);
   }, [role]);
 

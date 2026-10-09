@@ -19,7 +19,7 @@ export const LiveToastAlert: React.FC = () => {
     // 1. Listen for new incoming SOS broadcasts
     const unsubSOS = offlineMeshNetwork.subscribeToIncomingSOS((packet) => {
       // Only show incoming SOS toast to Doctors & Admins
-      if (currentUser.role === 'doctor' || currentUser.role === 'admin') {
+      if (currentUser.role === 'doctor' || currentUser.role === 'medical_coordinator' || currentUser.role === 'admin') {
         setActiveToast({
           id: packet.packetId,
           type: 'SOS_INCOMING',
@@ -47,6 +47,16 @@ export const LiveToastAlert: React.FC = () => {
       unsubAck();
     };
   }, [currentUser.role]);
+
+  // Auto-dismiss toast after 12 seconds
+  useEffect(() => {
+    if (activeToast) {
+      const timer = setTimeout(() => {
+        setActiveToast(null);
+      }, 12000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeToast]);
 
   if (!activeToast) return null;
 
