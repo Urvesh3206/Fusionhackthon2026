@@ -43,12 +43,12 @@ export const AppLayout: React.FC = () => {
   // Strict Role-Based Route Guarding
   const currentPath = location.pathname;
   if (currentUser.role === 'citizen') {
-    const allowedCitizenRoutes = ['/radio-sos', '/map', '/profile', '/comms'];
+    const allowedCitizenRoutes = ['/radio-sos', '/map', '/profile', '/comms', '/hazards', '/alerts'];
     if (!allowedCitizenRoutes.includes(currentPath)) {
       return <Navigate to="/radio-sos" replace />;
     }
   } else if (currentUser.role === 'doctor' || currentUser.role === 'medical_coordinator') {
-    const allowedDoctorRoutes = ['/radio-sos', '/hospitals', '/fleet', '/resources', '/map', '/profile'];
+    const allowedDoctorRoutes = ['/radio-sos', '/hospitals', '/fleet', '/resources', '/dispatch', '/incidents', '/map', '/profile', '/alerts'];
     if (!allowedDoctorRoutes.includes(currentPath)) {
       return <Navigate to="/radio-sos" replace />;
     }
