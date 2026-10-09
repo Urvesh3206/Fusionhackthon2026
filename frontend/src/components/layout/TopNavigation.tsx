@@ -16,7 +16,7 @@ export const TopNavigation: React.FC = () => {
   const { 
     state, currentUser, switchRole, 
     isConnected, showNotificationsDrawer, setShowNotificationsDrawer,
-    globalSearchQuery, setGlobalSearchQuery, isOfflineNetworkCrash,
+    globalSearchQuery, setGlobalSearchQuery, isOfflineNetworkCrash, setOfflineNetworkCrash,
     uiThemeMode, setUiThemeMode
   } = useEmergencyStore();
 
@@ -111,13 +111,21 @@ export const TopNavigation: React.FC = () => {
           </div>
         </div>
 
-        {/* Center: Clean Connection Status */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200/80 text-xs">
-          <span className={`w-2 h-2 rounded-full ${isOfflineNetworkCrash ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></span>
-          <span className="text-slate-700 font-medium">
-            {isOfflineNetworkCrash ? 'Offline Radio Mesh Active' : 'System Online • All Channels Operational'}
+        {/* Center: Clean Connection Status & Offline BIN Toggle */}
+        <button
+          onClick={() => setOfflineNetworkCrash(!isOfflineNetworkCrash)}
+          title="Click to toggle between Online (Cloudflare) and Offline Zero-Internet (BIN Beacon Mesh) mode"
+          className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition ${
+            isOfflineNetworkCrash 
+              ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 animate-pulse' 
+              : 'bg-slate-100 dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+          }`}
+        >
+          <span className={`w-2.5 h-2.5 rounded-full ${isOfflineNetworkCrash ? 'bg-amber-400' : 'bg-emerald-500'}`}></span>
+          <span>
+            {isOfflineNetworkCrash ? '⚡ Offline BIN Beacon Mesh Active (0-Internet)' : '🟢 System Online • Cloudflare Active'}
           </span>
-        </div>
+        </button>
 
         {/* Right: Quick Search, Refresh, Notifications, SOS, Profile */}
         <div className="flex items-center space-x-2 md:space-x-3">
