@@ -1,0 +1,61 @@
+{
+  "scenario_id": "heatwave_odisha",
+  "name": "Severe Coastal Heatwave & Elderly Vulnerability (Odisha)",
+  "steps": [
+    {
+      "step_id": "HW-Day1-10AM",
+      "step_index": 0,
+      "time_label": "Day 1 - 10:00 AM: Heat Advisory Issued",
+      "hazard_type": "heatwave",
+      "apparent_temp_c": 43.5,
+      "wet_bulb_temp_c": 28.2,
+      "summary_text": "Dry northwesterly heat plume pushes heat index over 43°C. IMD issues yellow warning for Puri & Khordha.",
+      "road_failures": {},
+      "hospital_deratings": {},
+      "emergency_calls": [
+        {"id": "hw_call_1", "priority": "P2_Urgent", "patient_condition": "Heat exhaustion, dehydration and syncope (Age 74)", "required_specialty": "General", "location": [85.8315, 19.8130], "district": "Puri Urban"},
+        {"id": "hw_call_2", "priority": "P3_Standard", "patient_condition": "Severe dizziness and heat cramps (Age 68)", "required_specialty": "General", "location": [85.8060, 19.7910], "district": "Puri Coastal"}
+      ]
+    },
+    {
+      "step_id": "HW-Day2-02PM",
+      "step_index": 1,
+      "time_label": "Day 2 - 02:00 PM: Extreme Heat Peak",
+      "hazard_type": "heatwave",
+      "apparent_temp_c": 48.2,
+      "wet_bulb_temp_c": 32.5,
+      "summary_text": "Dangerous thermal stress. High wet-bulb conditions severely impair human metabolic cooling. Elderly clusters at extreme risk.",
+      "road_failures": {},
+      "hospital_deratings": {},
+      "emergency_calls": [
+        {"id": "hw_call_3", "priority": "P1_Critical", "patient_condition": "Exertional heat stroke with hyperpyrexia (41.2°C) & altered sensorium (Age 78)", "required_specialty": "Cardiac", "location": [85.8290, 19.8140], "district": "Puri Urban"},
+        {"id": "hw_call_4", "priority": "P1_Critical", "patient_condition": "Severe cardiovascular collapse triggered by thermal stress (Age 82)", "required_specialty": "Cardiac", "location": [85.8190, 19.7980], "district": "Puri Coastal"},
+        {"id": "hw_call_5", "priority": "P2_Urgent", "patient_condition": "Severe acute kidney injury secondary to profound dehydration (Age 71)", "required_specialty": "General", "location": [85.8270, 19.9510], "district": "Satyabadi Rural"}
+      ]
+    },
+    {
+      "step_id": "HW-Day3-04PM",
+      "step_index": 2,
+      "time_label": "Day 3 - 04:00 PM: Thermal Grid Overload & Peak Calls",
+      "hazard_type": "heatwave",
+      "apparent_temp_c": 46.0,
+      "wet_bulb_temp_c": 31.0,
+      "summary_text": "Substation transformer overload causes power derating at Gop CHC. Cooling points deployed in high elderly density zones.",
+      "road_failures": {},
+      "hospital_deratings": {
+        "hosp_gop_chc": {
+          "has_power": false,
+          "has_comms": true,
+          "usable_beds": 25,
+          "free_icu_beds": 0,
+          "derated_capacity_ratio": 0.50,
+          "status_reason": "Transformer overload tripped main substation line; running critical triage on emergency genset."
+        }
+      },
+      "emergency_calls": [
+        {"id": "hw_call_6", "priority": "P1_Critical", "patient_condition": "Heat apoplexy and delirium in unventilated residence (Age 85)", "required_specialty": "General", "location": [86.0020, 19.9980], "district": "Gop Rural"},
+        {"id": "hw_call_7", "priority": "P2_Urgent", "patient_condition": "Cardiovascular decompensation in heat (Age 76)", "required_specialty": "Cardiac", "location": [85.8340, 20.1150], "district": "Pipili Rural"}
+      ]
+    }
+  ]
+}

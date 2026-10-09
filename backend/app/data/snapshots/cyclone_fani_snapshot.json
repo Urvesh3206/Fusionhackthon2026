@@ -1,0 +1,190 @@
+{
+  "scenario_id": "cyclone_fani_puri",
+  "name": "Cyclone Fani Landfall (Puri Coastal District)",
+  "steps": [
+    {
+      "step_id": "T-48h",
+      "step_index": 0,
+      "time_label": "T-48 Hours Pre-Landfall",
+      "hazard_type": "cyclone",
+      "wind_speed_kmh": 65.0,
+      "rain_rate_mmh": 10.0,
+      "river_discharge_m3s": 140.0,
+      "summary_text": "GDACS Category 1 tracking off Odisha coast. Cloud bands increasing. River discharge baseline 140 m3/s.",
+      "cone_polygon": [
+        [85.2, 18.5],
+        [87.0, 18.7],
+        [87.2, 20.6],
+        [85.4, 20.4],
+        [85.2, 18.5]
+      ],
+      "road_failures": {},
+      "hospital_deratings": {},
+      "emergency_calls": [
+        {"id": "call_1", "priority": "P2_Urgent", "patient_condition": "Severe Asthma attack aggravated by humidity", "required_specialty": "General", "location": [85.8310, 19.8120], "district": "Puri Urban"},
+        {"id": "call_2", "priority": "P3_Standard", "patient_condition": "Minor blunt trauma from pre-storm securing", "required_specialty": "General", "location": [85.8080, 19.7910], "district": "Puri Coastal"}
+      ]
+    },
+    {
+      "step_id": "T-24h",
+      "step_index": 1,
+      "time_label": "T-24 Hours Pre-Landfall",
+      "hazard_type": "cyclone",
+      "wind_speed_kmh": 115.0,
+      "rain_rate_mmh": 38.0,
+      "river_discharge_m3s": 490.0,
+      "summary_text": "Cyclone cone narrows directly onto Puri coastline. GloFAS discharge jumps to 490 m3/s. Storm surge watch initiated.",
+      "cone_polygon": [
+        [85.5, 19.1],
+        [86.6, 19.3],
+        [86.4, 20.3],
+        [85.6, 20.1],
+        [85.5, 19.1]
+      ],
+      "road_failures": {},
+      "hospital_deratings": {},
+      "emergency_calls": [
+        {"id": "call_3", "priority": "P1_Critical", "patient_condition": "Acute myocardial infarction (Cardiac emergency)", "required_specialty": "Cardiac", "location": [85.8290, 19.8150], "district": "Puri Urban"},
+        {"id": "call_4", "priority": "P2_Urgent", "patient_condition": "High-risk pregnancy with active contractions", "required_specialty": "Maternity", "location": [86.0020, 19.9980], "district": "Gop Rural"},
+        {"id": "call_5", "priority": "P2_Urgent", "patient_condition": "Fractured femur from collapsed tin roof", "required_specialty": "Trauma", "location": [85.8050, 19.7920], "district": "Puri Coastal"}
+      ]
+    },
+    {
+      "step_id": "T-6h",
+      "step_index": 2,
+      "time_label": "T-6 Hours: Flood Warning & Bridge Overtopping",
+      "hazard_type": "cyclone",
+      "wind_speed_kmh": 165.0,
+      "rain_rate_mmh": 78.0,
+      "river_discharge_m3s": 930.0,
+      "summary_text": "Torrential rain and GloFAS river surge breach low banks. Kushabhadra River Bridge and Bhargavi River Low Bridge failure probability exceeds 0.85.",
+      "cone_polygon": [
+        [85.65, 19.45],
+        [86.25, 19.55],
+        [86.15, 20.15],
+        [85.70, 20.05],
+        [85.65, 19.45]
+      ],
+      "road_failures": {
+        "edge_marine_drive_kushabhadra_bridge": {
+          "failure_prob": 0.92,
+          "is_closed": true,
+          "closure_reason": "Kushabhadra River overtopped bridge deck by 0.7m."
+        },
+        "edge_nh316_bhargavi_bridge": {
+          "failure_prob": 0.88,
+          "is_closed": true,
+          "closure_reason": "Bhargavi River flood crest submerged approach culverts."
+        }
+      },
+      "hospital_deratings": {},
+      "emergency_calls": [
+        {"id": "call_6", "priority": "P1_Critical", "patient_condition": "Severe polytrauma from coastal wall collapse", "required_specialty": "Trauma", "location": [85.9610, 19.8560], "district": "Gop-Konark Corridor"},
+        {"id": "call_7", "priority": "P1_Critical", "patient_condition": "Cardiac arrest with CPR in progress", "required_specialty": "Cardiac", "location": [85.8270, 19.9520], "district": "Satyabadi Rural"},
+        {"id": "call_8", "priority": "P2_Urgent", "patient_condition": "Severe respiratory distress", "required_specialty": "General", "location": [85.6450, 19.8070], "district": "Brahmagiri Rural"}
+      ]
+    },
+    {
+      "step_id": "Landfall",
+      "step_index": 3,
+      "time_label": "Landfall: Eye Crosses Coastline (Power & Comms Down)",
+      "hazard_type": "cyclone",
+      "wind_speed_kmh": 215.0,
+      "rain_rate_mmh": 125.0,
+      "river_discharge_m3s": 1380.0,
+      "summary_text": "Extremely Severe Cyclone makes landfall near Puri. Coastal Infectious Disease Hospital loses power and comms; ICU derated to 0. Coastal roads flooded.",
+      "cone_polygon": [
+        [85.75, 19.70],
+        [86.05, 19.75],
+        [85.95, 19.95],
+        [85.70, 19.90],
+        [85.75, 19.70]
+      ],
+      "road_failures": {
+        "edge_marine_drive_kushabhadra_bridge": {
+          "failure_prob": 0.98,
+          "is_closed": true,
+          "closure_reason": "Severe inundation on bridge deck (1.4m depth)."
+        },
+        "edge_nh316_bhargavi_bridge": {
+          "failure_prob": 0.95,
+          "is_closed": true,
+          "closure_reason": "Bhargavi bridge completely impassable due to raging river flow."
+        },
+        "edge_coastal_beach_road": {
+          "failure_prob": 0.89,
+          "is_closed": true,
+          "closure_reason": "Storm surge sea water inundation along Puri beach boulevard."
+        }
+      },
+      "hospital_deratings": {
+        "hosp_puri_coastal_id": {
+          "has_power": false,
+          "has_comms": false,
+          "usable_beds": 20,
+          "free_icu_beds": 0,
+          "derated_capacity_ratio": 0.20,
+          "status_reason": "Grid power loss + flooded generator + comms drop. ICU offline."
+        }
+      },
+      "emergency_calls": [
+        {"id": "call_9", "priority": "P1_Critical", "patient_condition": "Critical crushed chest injury requiring emergency thoracic surgery & ICU", "required_specialty": "Trauma", "location": [85.8120, 19.7930], "district": "Puri Coastal"},
+        {"id": "call_10", "priority": "P1_Critical", "patient_condition": "Severe acute respiratory failure requiring ICU mechanical ventilation", "required_specialty": "Cardiac", "location": [85.8350, 19.8180], "district": "Puri Urban"},
+        {"id": "call_11", "priority": "P2_Urgent", "patient_condition": "Deep lacerations with severe arterial bleeding", "required_specialty": "Trauma", "location": [85.7350, 19.8080], "district": "Brahmagiri Rural"}
+      ]
+    },
+    {
+      "step_id": "T+6h",
+      "step_index": 4,
+      "time_label": "T+6 Hours Post-Landfall: Highway Debris Blockage",
+      "hazard_type": "cyclone",
+      "wind_speed_kmh": 125.0,
+      "rain_rate_mmh": 45.0,
+      "river_discharge_m3s": 1150.0,
+      "summary_text": "Cyclone moves inland. Large uprooted banyan trees and high-tension electrical cables block NH-316 between Satyabadi and Pipili.",
+      "cone_polygon": [
+        [85.70, 19.90],
+        [86.10, 19.95],
+        [86.05, 20.30],
+        [85.65, 20.25],
+        [85.70, 19.90]
+      ],
+      "road_failures": {
+        "edge_marine_drive_kushabhadra_bridge": {
+          "failure_prob": 0.90,
+          "is_closed": true,
+          "closure_reason": "Flooding receding slowly; structural integrity check pending."
+        },
+        "edge_nh316_bhargavi_bridge": {
+          "failure_prob": 0.85,
+          "is_closed": true,
+          "closure_reason": "River discharge still above critical flood stage."
+        },
+        "edge_coastal_beach_road": {
+          "failure_prob": 0.80,
+          "is_closed": true,
+          "closure_reason": "Heavy sand dunes and sea debris blocking boulevard."
+        },
+        "edge_nh316_satyabadi_pipili": {
+          "failure_prob": 0.95,
+          "is_closed": true,
+          "closure_reason": "Uprooted giant trees and collapsed 33kV high-voltage lines across highway."
+        }
+      },
+      "hospital_deratings": {
+        "hosp_puri_coastal_id": {
+          "has_power": false,
+          "has_comms": false,
+          "usable_beds": 20,
+          "free_icu_beds": 0,
+          "derated_capacity_ratio": 0.20,
+          "status_reason": "Grid power loss + flooded generator + comms drop. ICU offline."
+        }
+      },
+      "emergency_calls": [
+        {"id": "call_12", "priority": "P1_Critical", "patient_condition": "Traumatic head injury from flying structural debris", "required_specialty": "Trauma", "location": [85.8300, 19.9550], "district": "Satyabadi Rural"},
+        {"id": "call_13", "priority": "P2_Urgent", "patient_condition": "Electrocution shock from dangling wire", "required_specialty": "General", "location": [85.8360, 20.1160], "district": "Pipili Rural"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "cell_puri_urban_core",
+    "district": "Puri Urban",
+    "lon": 85.8312,
+    "lat": 19.8135,
+    "population": 12500,
+    "elderly_population": 1870,
+    "elevation_m": 7.5,
+    "baseline_demand_weight": 0.28
+  },
+  {
+    "id": "cell_baliapanda_coastal",
+    "district": "Puri Coastal",
+    "lon": 85.8050,
+    "lat": 19.7900,
+    "population": 6200,
+    "elderly_population": 840,
+    "elevation_m": 2.2,
+    "baseline_demand_weight": 0.14
+  },
+  {
+    "id": "cell_swargadwar_shore",
+    "district": "Puri Coastal",
+    "lon": 85.8180,
+    "lat": 19.7970,
+    "population": 8400,
+    "elderly_population": 1150,
+    "elevation_m": 3.1,
+    "baseline_demand_weight": 0.18
+  },
+  {
+    "id": "cell_satyabadi_rural",
+    "district": "Satyabadi Rural",
+    "lon": 85.8270,
+    "lat": 19.9510,
+    "population": 5100,
+    "elderly_population": 720,
+    "elevation_m": 6.8,
+    "baseline_demand_weight": 0.10
+  },
+  {
+    "id": "cell_pipili_hub",
+    "district": "Pipili Rural",
+    "lon": 85.8330,
+    "lat": 20.1150,
+    "population": 7800,
+    "elderly_population": 990,
+    "elevation_m": 9.2,
+    "baseline_demand_weight": 0.12
+  },
+  {
+    "id": "cell_brahmagiri_west",
+    "district": "Brahmagiri Rural",
+    "lon": 85.6420,
+    "lat": 19.8050,
+    "population": 4300,
+    "elderly_population": 610,
+    "elevation_m": 4.5,
+    "baseline_demand_weight": 0.08
+  },
+  {
+    "id": "cell_gop_interior",
+    "district": "Gop Rural",
+    "lon": 86.0020,
+    "lat": 19.9980,
+    "population": 4800,
+    "elderly_population": 690,
+    "elevation_m": 7.0,
+    "baseline_demand_weight": 0.09
+  },
+  {
+    "id": "cell_konark_coast",
+    "district": "Konark",
+    "lon": 86.0945,
+    "lat": 19.8876,
+    "population": 3900,
+    "elderly_population": 540,
+    "elevation_m": 4.8,
+    "baseline_demand_weight": 0.07
+  },
+  {
+    "id": "cell_kakatpur_east",
+    "district": "Kakatpur Rural",
+    "lon": 86.1340,
+    "lat": 20.0210,
+    "population": 3400,
+    "elderly_population": 480,
+    "elevation_m": 6.2,
+    "baseline_demand_weight": 0.06
+  },
+  {
+    "id": "cell_astaranga_port",
+    "district": "Astaranga Coastal",
+    "lon": 86.2620,
+    "lat": 19.9820,
+    "population": 2900,
+    "elderly_population": 390,
+    "elevation_m": 3.0,
+    "baseline_demand_weight": 0.05
+  }
+]
