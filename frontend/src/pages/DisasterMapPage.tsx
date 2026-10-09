@@ -25,6 +25,11 @@ export const DisasterMapPage: React.FC = () => {
   const ambulances = state?.ambulances || [];
   const hospitals = state?.hospitals || [];
 
+  // 1. Automatically acquire and show Live GPS location immediately on mount
+  useEffect(() => {
+    handleUseLiveLocation();
+  }, []);
+
   // Default selection
   useEffect(() => {
     if (ambulances.length > 0 && !selectedAmbId) {

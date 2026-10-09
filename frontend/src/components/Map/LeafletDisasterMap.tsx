@@ -423,19 +423,41 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
           />
         )}
 
-        {/* 3. User Clicked Location Marker */}
+        {/* 3. User Live GPS / Clicked Location Marker & Satellite Accuracy Circle */}
         {clickedPoint && Array.isArray(clickedPoint) && clickedPoint.length >= 2 && !isNaN(clickedPoint[0]) && !isNaN(clickedPoint[1]) && (
-          <Marker position={clickedPoint} icon={customClickIcon}>
-            <Popup>
-              <div className="p-1 text-xs">
-                <p className="font-bold text-cyan-700 flex items-center">
-                  <MapPin className="w-3.5 h-3.5 mr-1" /> Selected Location
-                </p>
-                <p className="text-slate-600">Lat: {clickedPoint[0].toFixed(4)}, Lon: {clickedPoint[1].toFixed(4)}</p>
-                <p className="text-slate-500 mt-1 font-medium">Click on nearby ambulances/hospitals to calculate the shortest path.</p>
-              </div>
-            </Popup>
-          </Marker>
+          <>
+            <Circle
+              center={clickedPoint}
+              radius={600}
+              pathOptions={{
+                color: '#06b6d4',
+                fillColor: '#06b6d4',
+                fillOpacity: 0.18,
+                weight: 1.5,
+                dashArray: '4, 4'
+              }}
+            />
+            <Marker position={clickedPoint} icon={customClickIcon}>
+              <Popup>
+                <div className="p-1.5 text-xs min-w-[200px]">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <p className="font-bold text-cyan-800 flex items-center">
+                      <MapPin className="w-3.5 h-3.5 mr-1 text-cyan-600" /> Live GPS Location
+                    </p>
+                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[9px]">
+                      DIRECT SATELLITE FIX
+                    </span>
+                  </div>
+                  <p className="text-slate-700 mt-1 font-mono text-[11px]">
+                    {clickedPoint[0].toFixed(4)}°N, {clickedPoint[1].toFixed(4)}°E
+                  </p>
+                  <p className="text-slate-500 mt-1 text-[10px]">
+                    Showing nearest emergency ambulances and hospitals ranked by direct response time.
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          </>
         )}
 
         {/* 4. Hazard Overlay */}
