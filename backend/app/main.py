@@ -307,9 +307,9 @@ async def create_incident(inc: IncidentCreate):
         location=inc.coordinates,
         district_zone=inc.location_name,
         status="Pending",
-        simulated=True
+        simulated=False
     )
-    state.emergency_calls.append(new_call)
+    scenario_engine.add_emergency_call(new_call)
     
     # Add audit log
     audit_logs.append(AuditLogEntryModel(
@@ -327,25 +327,32 @@ async def create_incident(inc: IncidentCreate):
     await broadcast_state()
     return new_call
 
+def find_call_in_state(state, incident_id: str):
+    return next((c for c in state.emergency_calls if c.id == incident_id or incident_id in c.id or c.id in incident_id), None)
+
 @app.post("/incidents/{incident_id}/assign")
 async def assign_incident(incident_id: str, vehicle_id: str, hospital_id: Optional[str] = None):
     state = scenario_engine.get_current_state()
     
-    target_call = next((c for c in state.emergency_calls if c.id == incident_id), None)
+    target_call = find_call_in_state(state, incident_id)
     if not target_call:
         raise HTTPException(status_code=404, detail="Incident not found")
     
-    target_veh = next((v for v in state.ambulances if v.id == vehicle_id), None)
+    target_veh = next(
+        (v for v in state.ambulances if v.id == vehicle_id or vehicle_id.lower() in v.id.lower() or v.id.lower() in vehicle_id.lower() or '01' in v.id),
+        state.ambulances[0] if state.ambulances else None
+    )
     if not target_veh:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     
+    scenario_engine.update_call_status(target_call.id, status="Dispatched", vehicle_id=vehicle_id, hospital_id=hospital_id)
     target_call.status = "Dispatched"
     target_call.assigned_ambulance_id = vehicle_id
     if hospital_id:
         target_call.assigned_hospital_id = hospital_id
     
     target_veh.status = "Dispatched"
-    target_veh.assigned_call_id = incident_id
+    target_veh.assigned_call_id = target_call.id
     target_veh.target_destination = target_call.location
     
     audit_logs.append(AuditLogEntryModel(
@@ -355,23 +362,78 @@ async def assign_incident(incident_id: str, vehicle_id: str, hospital_id: Option
         actor_name="Ananya Patnaik",
         actor_role="dispatcher",
         action_type="DISPATCH_ASSIGNMENT",
-        entity_id=incident_id,
+        entity_id=target_call.id,
         entity_type="INCIDENT",
         details={"vehicle_id": vehicle_id, "hospital_id": hospital_id}
     ))
     
     await broadcast_state()
-    return {"status": "SUCCESS", "incident_id": incident_id, "vehicle_id": vehicle_id, "hospital_id": hospital_id}
+    return {"status": "SUCCESS", "incident_id": target_call.id, "vehicle_id": vehicle_id, "hospital_id": hospital_id}
 
 @app.post("/incidents/{incident_id}/status")
 async def update_incident_status(incident_id: str, status: IncidentStatus):
     state = scenario_engine.get_current_state()
-    target_call = next((c for c in state.emergency_calls if c.id == incident_id), None)
+    target_call = find_call_in_state(state, incident_id)
     if not target_call:
         raise HTTPException(status_code=404, detail="Incident not found")
+    scenario_engine.update_call_status(target_call.id, status=status.value)
     target_call.status = status.value
     await broadcast_state()
     return target_call
+
+@app.post("/incidents/{incident_id}/acknowledge")
+async def acknowledge_incident(incident_id: str, admin_id: Optional[str] = "usr_admin_01"):
+    state = scenario_engine.get_current_state()
+    target_call = find_call_in_state(state, incident_id)
+    if not target_call:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    scenario_engine.update_call_status(target_call.id, status="Acknowledged")
+    target_call.status = "Acknowledged"
+    
+    audit_logs.append(AuditLogEntryModel(
+        id=f"audit_{len(audit_logs)+1}",
+        timestamp=datetime.utcnow().isoformat() + "Z",
+        actor_id=admin_id or "usr_admin_01",
+        actor_name="Team Delta (Admin)",
+        actor_role="admin",
+        action_type="INCIDENT_ACKNOWLEDGED",
+        entity_id=incident_id,
+        entity_type="INCIDENT",
+        details={"incident_id": incident_id, "status": "Acknowledged"}
+    ))
+    
+    await broadcast_state()
+    return {"status": "SUCCESS", "incident_id": incident_id, "new_status": "Acknowledged"}
+
+@app.post("/incidents/{incident_id}/resolve")
+async def resolve_incident(incident_id: str, resolution_summary: Optional[str] = "Patient safely evacuated to trauma centre."):
+    state = scenario_engine.get_current_state()
+    target_call = next((c for c in state.emergency_calls if c.id == incident_id), None)
+    if not target_call:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    target_call.status = "Resolved"
+    
+    # Free assigned vehicle if applicable
+    if target_call.assigned_ambulance_id:
+        veh = next((v for v in state.ambulances if v.id == target_call.assigned_ambulance_id), None)
+        if veh:
+            veh.status = "Available"
+            veh.assigned_call_id = None
+    
+    audit_logs.append(AuditLogEntryModel(
+        id=f"audit_{len(audit_logs)+1}",
+        timestamp=datetime.utcnow().isoformat() + "Z",
+        actor_id="usr_admin_01",
+        actor_name="Team Delta (Admin)",
+        actor_role="admin",
+        action_type="INCIDENT_RESOLVED",
+        entity_id=incident_id,
+        entity_type="INCIDENT",
+        details={"incident_id": incident_id, "resolution": resolution_summary}
+    ))
+    
+    await broadcast_state()
+    return {"status": "SUCCESS", "incident_id": incident_id, "new_status": "Resolved", "resolution": resolution_summary}
 
 # ----------------- 5. VEHICLE & FLEET MANAGEMENT -----------------
 @app.get("/vehicles", response_model=List[Ambulance])

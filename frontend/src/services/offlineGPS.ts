@@ -18,23 +18,44 @@ const FACILITY_CACHE_KEY = 'resqgrid_offline_facilities_v1';
 
 // ──────────────── REAL GPS ACQUISITION ────────────────
 
+export interface GPSAcquireOptions {
+  timeoutMs?: number;
+  maximumAgeMs?: number;
+  forceFresh?: boolean;
+}
+
+export function getGeolocationErrorMessage(err: any): string {
+  if (!err) return 'Unknown geolocation error.';
+  if (typeof err === 'string') return err;
+  if (err.code === 1) { // PERMISSION_DENIED
+    return 'Location permission denied by user or browser. Please enable location permissions in browser settings.';
+  }
+  if (err.code === 2) { // POSITION_UNAVAILABLE
+    return 'GPS satellite fix unavailable. Check device location services or move outdoors for satellite reception.';
+  }
+  if (err.code === 3) { // TIMEOUT
+    return 'GPS acquisition timed out. Retrying high-accuracy satellite fix...';
+  }
+  return err.message || 'Unable to obtain GPS position from device.';
+}
+
 /**
  * Attempts to get real device GPS position from the browser Geolocation API.
- * This works OFFLINE because GPS receivers communicate directly with satellites,
- * not through cell towers or internet. Only A-GPS (assisted) needs network;
- * standalone GPS does not.
+ * Uses high accuracy satellite/cellular positioning with maximumAge: 0 to ensure live accuracy.
  */
-export function getRealGPSPosition(timeoutMs = 15000): Promise<RealGPSPosition> {
+export function getRealGPSPosition(options: GPSAcquireOptions | number = 15000): Promise<RealGPSPosition> {
+  const timeoutMs = typeof options === 'number' ? options : (options.timeoutMs ?? 15000);
+  const maximumAgeMs = typeof options === 'number' ? 0 : (options.maximumAgeMs ?? 0);
+
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      // Fallback: try cached position
-      const cached = getCachedGPS();
-      if (cached) {
-        resolve(cached);
-      } else {
-        reject(new Error('Geolocation API not supported and no cached position available.'));
-      }
+    if (typeof window === 'undefined' || !navigator || !navigator.geolocation) {
+      reject(new Error('Geolocation API not supported on this browser or device.'));
       return;
+    }
+
+    // Check for insecure context (Geolocation requires HTTPS or localhost)
+    if (window.isSecureContext === false && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      console.warn('[ResQGrid GPS] Insecure context: Geolocation requires HTTPS.');
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -46,51 +67,37 @@ export function getRealGPSPosition(timeoutMs = 15000): Promise<RealGPSPosition> 
           altitude_m: pos.coords.altitude,
           heading_deg: pos.coords.heading,
           speed_mps: pos.coords.speed,
-          timestamp: pos.timestamp,
+          timestamp: pos.timestamp || Date.now(),
           source: 'GPS_SATELLITE'
         };
 
-        // Cache this position for future offline use
+        // Cache this position for fallback reference with explicit timestamp
         cacheGPSPosition(gpsResult);
         resolve(gpsResult);
       },
       (err) => {
-        console.warn('[ResQGrid Offline GPS] Live GPS failed, falling back to cache:', err.message);
-        const cached = getCachedGPS();
-        if (cached) {
-          resolve(cached);
-        } else {
-          // Final fallback: Puri District center coordinates
-          resolve({
-            latitude: 19.8135,
-            longitude: 85.8312,
-            accuracy_m: 5000,
-            altitude_m: null,
-            heading_deg: null,
-            speed_mps: null,
-            timestamp: Date.now(),
-            source: 'MANUAL_FALLBACK'
-          });
-        }
+        console.warn('[ResQGrid GPS] Real GPS acquisition failed:', err.message);
+        reject(err);
       },
       {
-        enableHighAccuracy: true,     // Use GPS chip, not WiFi/cell triangulation
+        enableHighAccuracy: true,     // Force hardware GPS chip / high-accuracy provider
         timeout: timeoutMs,
-        maximumAge: 60000             // Accept positions up to 1 minute old
+        maximumAge: maximumAgeMs      // 0 = never accept stale cached coordinates
       }
     );
   });
 }
 
 /**
- * Watch position continuously — useful for tracking ambulance movement.
- * Returns a watchId that can be cleared with navigator.geolocation.clearWatch(id).
+ * Watch position continuously for live real-time location tracking.
+ * Returns a watchId that MUST be cleared with navigator.geolocation.clearWatch(id).
  */
 export function watchRealGPS(
   onUpdate: (pos: RealGPSPosition) => void,
-  onError?: (err: GeolocationPositionError) => void
+  onError?: (err: GeolocationPositionError) => void,
+  options?: { timeoutMs?: number; maximumAgeMs?: number }
 ): number | null {
-  if (!navigator.geolocation) return null;
+  if (typeof window === 'undefined' || !navigator || !navigator.geolocation) return null;
 
   return navigator.geolocation.watchPosition(
     (pos) => {
@@ -101,17 +108,20 @@ export function watchRealGPS(
         altitude_m: pos.coords.altitude,
         heading_deg: pos.coords.heading,
         speed_mps: pos.coords.speed,
-        timestamp: pos.timestamp,
+        timestamp: pos.timestamp || Date.now(),
         source: 'GPS_SATELLITE'
       };
       cacheGPSPosition(gpsResult);
       onUpdate(gpsResult);
     },
-    onError,
+    (err) => {
+      console.warn('[ResQGrid GPS Watcher] Position update error:', err.message);
+      if (onError) onError(err);
+    },
     {
       enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 5000
+      timeout: options?.timeoutMs ?? 15000,
+      maximumAge: options?.maximumAgeMs ?? 0 // Always receive fresh live coordinates
     }
   );
 }

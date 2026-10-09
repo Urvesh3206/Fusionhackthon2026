@@ -12,10 +12,34 @@ DEMO_USERS: Dict[str, User] = {
     "admin": User(
         id="usr_admin_01",
         username="admin",
-        full_name="Dr. Elena Vance (EOC Director)",
+        full_name="Team Delta (EOC Command & Admin)",
         role=UserRole.ADMIN,
-        email="elena.vance@ifrc-odisha.org",
+        email="admin@resqgrid.org",
         permissions=["*"]
+    ),
+    "patient": User(
+        id="usr_patient_01",
+        username="patient",
+        full_name="Rajesh Mohanty (Demo Patient)",
+        role=UserRole.CITIZEN,
+        email="patient@resqgrid.org",
+        permissions=["incidents:create", "incidents:read_own"]
+    ),
+    "citizen": User(
+        id="usr_patient_01",
+        username="citizen",
+        full_name="Rajesh Mohanty (Demo Patient)",
+        role=UserRole.CITIZEN,
+        email="patient@resqgrid.org",
+        permissions=["incidents:create", "incidents:read_own"]
+    ),
+    "doctor": User(
+        id="usr_med_01",
+        username="doctor",
+        full_name="Dr. Subrat Mishra (Chief Medical Officer)",
+        role=UserRole.DOCTOR,
+        email="doctor@dhh-puri.gov.in",
+        permissions=["hospitals:update", "resources:manage", "triage:override"]
     ),
     "coordinator": User(
         id="usr_coord_01",

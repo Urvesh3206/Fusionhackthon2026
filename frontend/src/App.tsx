@@ -18,6 +18,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { OfflineRadioSOSPage } from './pages/OfflineRadioSOSPage';
+import { MultiChannelCommsPage } from './pages/MultiChannelCommsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export function App() {
@@ -29,6 +30,12 @@ export function App() {
           <Route index element={<DashboardPage />} />
           <Route path="dashboard" element={<Navigate to="/" replace />} />
           <Route path="map" element={<DisasterMapPage />} />
+          <Route path="field-map-node-grid" element={<Navigate to="/map" replace />} />
+          <Route path="comms" element={<MultiChannelCommsPage />} />
+          <Route path="multi-channel-comms" element={<Navigate to="/comms" replace />} />
+          <Route path="live-mission-comms-hub" element={<Navigate to="/comms" replace />} />
+          <Route path="channel-telemetry-diagnostics" element={<Navigate to="/comms" replace />} />
+          <Route path="incident-dispatch-outbox" element={<Navigate to="/comms" replace />} />
           <Route path="radio-sos" element={<OfflineRadioSOSPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="hazards" element={<HazardIntelligencePage />} />
@@ -43,6 +50,7 @@ export function App() {
           <Route path="alerts" element={<AlertsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
+          <Route path="audit-logs-security" element={<Navigate to="/audit-logs" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

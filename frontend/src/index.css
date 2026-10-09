@@ -3,52 +3,116 @@
 @tailwind utilities;
 
 :root {
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   color-scheme: dark;
+}
+
+/* Material Symbols alignment helper */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
 }
 
 /* Custom Tactical Scrollbars */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #060911;
+  background: #080e1b;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #242a38;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #4cd7f6;
 }
 
-/* Glassmorphism & Cyber Tactical Utilities */
+/* Stitch Tactical Telemetry Typography Helpers */
+.font-label-caps {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.font-telemetry-sm {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  letter-spacing: 0.05em;
+}
+
+.font-telemetry-md {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.02em;
+}
+
+.font-telemetry-lg {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  letter-spacing: 0.04em;
+}
+
+/* Tactical Glassmorphism & Surface Utilities */
+.tactical-surface {
+  background-color: #0d1320;
+  border: 1px solid #242a38;
+}
+
+.tactical-card {
+  background-color: #161b29;
+  border: 1px solid #242a38;
+  border-radius: 0.5rem;
+}
+
+.tactical-card-hover {
+  transition: all 0.2s ease-in-out;
+}
+.tactical-card-hover:hover {
+  background-color: #1a1f2d;
+  border-color: #4cd7f6;
+  box-shadow: 0 0 15px -3px rgba(76, 215, 246, 0.2);
+}
+
 .glass-panel {
-  background: rgba(11, 17, 32, 0.75);
+  background: rgba(13, 19, 32, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(76, 215, 246, 0.15);
 }
 
 .glass-card {
-  background: rgba(15, 23, 42, 0.65);
+  background: rgba(22, 27, 41, 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .glow-cyan-border {
-  border-color: rgba(6, 182, 212, 0.4);
-  box-shadow: 0 0 15px -3px rgba(6, 182, 212, 0.2);
+  border-color: rgba(76, 215, 246, 0.5);
+  box-shadow: 0 0 16px -2px rgba(76, 215, 246, 0.3);
 }
 
 .glow-red-border {
-  border-color: rgba(239, 68, 68, 0.4);
-  box-shadow: 0 0 15px -3px rgba(239, 68, 68, 0.25);
+  border-color: rgba(255, 84, 81, 0.5);
+  box-shadow: 0 0 16px -2px rgba(255, 84, 81, 0.35);
 }
 
 /* Scanline Effect */
@@ -78,16 +142,17 @@
 /* Pulse animation for high priority pins */
 @keyframes ring-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    box-shadow: 0 0 0 0 rgba(255, 84, 81, 0.8);
   }
   70% {
-    box-shadow: 0 0 0 14px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 14px rgba(255, 84, 81, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 0 rgba(255, 84, 81, 0);
   }
 }
 
 .critical-pin-pulse {
   animation: ring-pulse 2s infinite;
 }
+

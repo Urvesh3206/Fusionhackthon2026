@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 
 class UserRole(str, Enum):
     ADMIN = "admin"
+    CITIZEN = "citizen"
+    DOCTOR = "doctor"
     EMERGENCY_COORDINATOR = "emergency_coordinator"
     DISPATCHER = "dispatcher"
     MEDICAL_COORDINATOR = "medical_coordinator"

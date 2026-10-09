@@ -97,11 +97,13 @@ interface EmergencyStore {
   showNotificationsDrawer: boolean;
   globalSearchQuery: string;
   isOfflineNetworkCrash: boolean;
+  uiThemeMode: 'user-friendly' | 'tactical';
   radioBeacons: RadioSOSBeacon[];
   selectedRadioBeaconId: string | null;
   activeRadioFrequencyMHz: number;
   
   // Actions
+  setUiThemeMode: (mode: 'user-friendly' | 'tactical') => void;
   setCurrentUser: (user: User) => void;
   switchRole: (role: UserRole) => void;
   setState: (state: FullSystemState) => void;
@@ -229,10 +231,12 @@ export const useEmergencyStore = create<EmergencyStore>((set) => ({
   showNotificationsDrawer: false,
   globalSearchQuery: '',
   isOfflineNetworkCrash: false,
+  uiThemeMode: 'user-friendly',
   radioBeacons: getOfflineBeacons(),
   selectedRadioBeaconId: null,
   activeRadioFrequencyMHz: 156.800,
 
+  setUiThemeMode: (uiThemeMode) => set({ uiThemeMode }),
   setCurrentUser: (currentUser) => set({ currentUser }),
   switchRole: (role) => {
     const profile = DEMO_USER_PROFILES[role] || DEMO_USER_PROFILES.admin;
@@ -277,3 +281,4 @@ export const useEmergencyStore = create<EmergencyStore>((set) => ({
   addOverride: (entry) => set((s) => ({ overrides: [entry, ...s.overrides] })),
   setOverrides: (overrides) => set({ overrides })
 }));
+

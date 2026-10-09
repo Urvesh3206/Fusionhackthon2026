@@ -9,7 +9,9 @@ import { initWebSocket } from '../../services/websocket';
 
 export const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { setState, setPlan, setConnected } = useEmergencyStore();
+  const { setState, setPlan, setConnected, uiThemeMode } = useEmergencyStore();
+
+  const isFriendly = uiThemeMode === 'user-friendly';
 
   useEffect(() => {
     // Initial fetch of system state
@@ -36,15 +38,23 @@ export const AppLayout: React.FC = () => {
   }, [setState, setPlan, setConnected]);
 
   return (
-    <div className="flex h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
+    <div className={`flex h-screen w-screen overflow-hidden antialiased transition-colors duration-200 ${
+      isFriendly 
+        ? 'bg-[#f4f5f8] text-slate-800 font-sans' 
+        : 'bg-surface text-on-surface font-sans'
+    }`}>
       {/* Sidebar Navigation */}
       <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate-900/50">
+      <div className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden ${
+        isFriendly ? 'bg-[#f4f5f8]' : 'bg-surface-container-lowest/50'
+      }`}>
         <TopNavigation />
         
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-950/40">
+        <main className={`flex-1 overflow-y-auto p-3 md:p-5 ${
+          isFriendly ? 'bg-[#f4f5f8]' : 'bg-surface'
+        }`}>
           <Outlet />
         </main>
       </div>
@@ -54,3 +64,4 @@ export const AppLayout: React.FC = () => {
     </div>
   );
 };
+

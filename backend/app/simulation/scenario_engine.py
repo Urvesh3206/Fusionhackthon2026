@@ -34,6 +34,7 @@ class ScenarioEngine:
         self.population_grid = self.data_loader.load_population_grid()
         self.temporary_resources: List[TemporaryResource] = []
         self.pending_calls: List[EmergencyCall] = []
+        self.call_status_overrides: Dict[str, Dict[str, Any]] = {}
         self.scenario_data = self.data_loader.load_scenario_data(self.active_scenario_id)
 
     def set_scenario(self, scenario_id: str):
@@ -156,7 +157,7 @@ class ScenarioEngine:
         calls_data = current_step.get("emergency_calls", [])
         current_calls: List[EmergencyCall] = []
         for c in calls_data:
-            current_calls.append(EmergencyCall(
+            call_obj = EmergencyCall(
                 id=c["id"],
                 timestamp=time_label,
                 priority=c["priority"],
@@ -166,7 +167,23 @@ class ScenarioEngine:
                 district_zone=c.get("district", "Puri Urban"),
                 status="Pending",
                 simulated=True
-            ))
+            )
+            if call_obj.id in self.call_status_overrides:
+                ov = self.call_status_overrides[call_obj.id]
+                if "status" in ov: call_obj.status = ov["status"]
+                if "assigned_ambulance_id" in ov: call_obj.assigned_ambulance_id = ov["assigned_ambulance_id"]
+                if "assigned_hospital_id" in ov: call_obj.assigned_hospital_id = ov["assigned_hospital_id"]
+            current_calls.append(call_obj)
+
+        # Include dynamic citizen emergency calls at the top
+        for dyn_call in self.pending_calls:
+            dyn_copy = dyn_call.model_copy()
+            if dyn_copy.id in self.call_status_overrides:
+                ov = self.call_status_overrides[dyn_copy.id]
+                if "status" in ov: dyn_copy.status = ov["status"]
+                if "assigned_ambulance_id" in ov: dyn_copy.assigned_ambulance_id = ov["assigned_ambulance_id"]
+                if "assigned_hospital_id" in ov: dyn_copy.assigned_hospital_id = ov["assigned_hospital_id"]
+            current_calls.insert(0, dyn_copy)
 
         # Build risk grid cells
         risk_cells: List[RiskGridCell] = []
@@ -245,3 +262,22 @@ class ScenarioEngine:
             offline_mode=True,
             last_updated=datetime.now(timezone.utc).isoformat()
         )
+
+    def add_emergency_call(self, call: EmergencyCall):
+        self.pending_calls.append(call)
+
+    def update_call_status(self, call_id: str, status: Optional[str] = None, vehicle_id: Optional[str] = None, hospital_id: Optional[str] = None):
+        if call_id not in self.call_status_overrides:
+            self.call_status_overrides[call_id] = {}
+        if status:
+            self.call_status_overrides[call_id]["status"] = status
+        if vehicle_id:
+            self.call_status_overrides[call_id]["assigned_ambulance_id"] = vehicle_id
+        if hospital_id:
+            self.call_status_overrides[call_id]["assigned_hospital_id"] = hospital_id
+        
+        for c in self.pending_calls:
+            if c.id == call_id or call_id in c.id or c.id in call_id:
+                if status: c.status = status
+                if vehicle_id: c.assigned_ambulance_id = vehicle_id
+                if hospital_id: c.assigned_hospital_id = hospital_id

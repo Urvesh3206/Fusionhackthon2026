@@ -81,6 +81,28 @@ export async function updateIncidentStatus(incidentId: string, status: string): 
   return res.json();
 }
 
+export async function acknowledgeIncident(incidentId: string, adminId: string = "usr_admin_01"): Promise<any> {
+  const url = new URL(`${API_BASE}/incidents/${incidentId}/acknowledge`, window.location.origin);
+  url.searchParams.append('admin_id', adminId);
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: getAuthHeader()
+  });
+  if (!res.ok) throw new Error('Failed to acknowledge incident');
+  return res.json();
+}
+
+export async function resolveIncident(incidentId: string, resolutionSummary?: string): Promise<any> {
+  const url = new URL(`${API_BASE}/incidents/${incidentId}/resolve`, window.location.origin);
+  if (resolutionSummary) url.searchParams.append('resolution_summary', resolutionSummary);
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: getAuthHeader()
+  });
+  if (!res.ok) throw new Error('Failed to resolve incident');
+  return res.json();
+}
+
 export function exportIncidentsCSVUrl(): string {
   return `${API_BASE}/incidents/export`;
 }
