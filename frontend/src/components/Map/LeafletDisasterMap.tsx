@@ -4,7 +4,7 @@ import L from 'leaflet';
 import { FullSystemState, Ambulance, Hospital, EmergencyCall, Shelter } from '../../types';
 import { 
   Shield, AlertTriangle, Hospital as HospitalIcon, 
-  Navigation, Truck, CheckCircle, Flame, Droplets, MapPin, Send
+  Navigation, Truck, CheckCircle, Flame, Droplets, MapPin, Send, Crosshair
 } from 'lucide-react';
 
 // Google Maps Style SVG Icons
@@ -69,17 +69,39 @@ function createAmbulanceIcon(isAvailable: boolean = true) {
 
 function createLiveGpsUserIcon() {
   const svg = `
-    <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-      <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(26, 115, 232, 0.35); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-      <div style="width: 18px; height: 18px; border-radius: 50%; background: #1a73e8; border: 3px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.5); z-index: 10;"></div>
+    <div style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translate(0, -6px);">
+      <div style="
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 2.5px 8px;
+        border-radius: 9999px;
+        border: 1.5px solid #ffffff;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+        white-space: nowrap;
+        margin-bottom: 3px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      ">
+        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 6px #38bdf8;"></span>
+        <span>YOU ARE HERE</span>
+      </div>
+      <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;">
+        <div style="position: absolute; width: 34px; height: 34px; border-radius: 50%; background: rgba(37, 99, 235, 0.35); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+        <div style="position: absolute; width: 24px; height: 24px; border-radius: 50%; background: rgba(59, 130, 246, 0.25); border: 1.5px solid rgba(255,255,255,0.8);"></div>
+        <div style="width: 15px; height: 15px; border-radius: 50%; background: #2563eb; border: 2.5px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.5); z-index: 10;"></div>
+      </div>
     </div>
   `;
   return L.divIcon({
     html: svg,
     className: 'custom-leaflet-pin',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -18]
+    iconSize: [110, 52],
+    iconAnchor: [55, 42],
+    popupAnchor: [0, -36]
   });
 }
 
@@ -244,6 +266,8 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
 }) => {
   const defaultCenter: [number, number] = [19.8135, 85.8312]; // Puri District Coordinates [lat, lon]
   const [basemap, setBasemap] = useState<BasemapType>('street');
+  const [internalGpsLocation, setInternalGpsLocation] = useState<[number, number] | null>(null);
+  const [isLocatingSelf, setIsLocatingSelf] = useState(false);
   const [activeLayers, setActiveLayers] = useState({
     hazards: true,
     ambulances: true,
@@ -252,6 +276,23 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
     shelters: true,
     closures: true,
   });
+
+  // Auto-acquire live location on mount if not already supplied
+  useEffect(() => {
+    if (!clickedPoint && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+          setInternalGpsLocation(coords);
+          if (onMapClick) onMapClick(coords[0], coords[1]);
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+  }, [clickedPoint, onMapClick]);
+
+  const activeUserLocation = clickedPoint || internalGpsLocation;
 
   const ambulances = state?.ambulances || [];
   const hospitals = state?.hospitals || [];
@@ -358,7 +399,7 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
         <MapViewController 
           center={defaultCenter} 
           zoom={12} 
-          clickedPoint={clickedPoint} 
+          clickedPoint={activeUserLocation} 
           selectedRoute={selectedRoute} 
         />
         <MapResizer />
@@ -423,36 +464,36 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
           />
         )}
 
-        {/* 3. User Live GPS / Clicked Location Marker & Satellite Accuracy Circle */}
-        {clickedPoint && Array.isArray(clickedPoint) && clickedPoint.length >= 2 && !isNaN(clickedPoint[0]) && !isNaN(clickedPoint[1]) && (
+        {/* 3. User Live GPS Location Marker with Radar Pulse */}
+        {activeUserLocation && Array.isArray(activeUserLocation) && activeUserLocation.length >= 2 && !isNaN(activeUserLocation[0]) && !isNaN(activeUserLocation[1]) && (
           <>
             <Circle
-              center={clickedPoint}
-              radius={600}
+              center={activeUserLocation}
+              radius={500}
               pathOptions={{
-                color: '#06b6d4',
-                fillColor: '#06b6d4',
+                color: '#2563eb',
+                fillColor: '#3b82f6',
                 fillOpacity: 0.18,
                 weight: 1.5,
                 dashArray: '4, 4'
               }}
             />
-            <Marker position={clickedPoint} icon={customClickIcon}>
+            <Marker position={activeUserLocation} icon={customClickIcon}>
               <Popup>
                 <div className="p-1.5 text-xs min-w-[200px]">
                   <div className="flex items-center justify-between pb-1 border-b border-slate-200">
-                    <p className="font-bold text-cyan-800 flex items-center">
-                      <MapPin className="w-3.5 h-3.5 mr-1 text-cyan-600" /> Live GPS Location
+                    <p className="font-bold text-blue-700 flex items-center">
+                      <MapPin className="w-3.5 h-3.5 mr-1 text-blue-600" /> Your Live Location
                     </p>
-                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[9px]">
-                      DIRECT SATELLITE FIX
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[9px]">
+                      GPS ACTIVE
                     </span>
                   </div>
                   <p className="text-slate-700 mt-1 font-mono text-[11px]">
-                    {clickedPoint[0].toFixed(4)}°N, {clickedPoint[1].toFixed(4)}°E
+                    {activeUserLocation[0].toFixed(4)}°N, {activeUserLocation[1].toFixed(4)}°E
                   </p>
                   <p className="text-slate-500 mt-1 text-[10px]">
-                    Showing nearest emergency ambulances and hospitals ranked by direct response time.
+                    Live facilities and emergency routes are actively mapped relative to your coordinates.
                   </p>
                 </div>
               </Popup>
@@ -643,9 +684,37 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
         })}
       </MapContainer>
 
+      {/* Floating 1-Click "My Location" Button on the Map */}
+      <button
+        onClick={() => {
+          setIsLocatingSelf(true);
+          if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+                setInternalGpsLocation(coords);
+                if (onMapClick) onMapClick(coords[0], coords[1]);
+                setIsLocatingSelf(false);
+              },
+              () => setIsLocatingSelf(false),
+              { enableHighAccuracy: true, timeout: 8000 }
+            );
+          }
+        }}
+        className="absolute bottom-4 left-4 z-[1000] bg-white text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl border border-blue-200 shadow-xl text-xs font-bold flex items-center space-x-1.5 transition active:scale-95"
+        title="Center map on your live GPS position"
+      >
+        <Crosshair className={`w-4 h-4 text-blue-600 ${isLocatingSelf ? 'animate-spin' : ''}`} />
+        <span>📍 Locate Me</span>
+      </button>
+
       {/* Map Legend Overlay in Bottom Right */}
       <div className="absolute bottom-3 right-3 z-[1000] bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-800 text-[11px] text-slate-300 shadow-xl space-y-1">
         <p className="font-semibold text-slate-400 mb-1 border-b border-slate-800 pb-0.5">Map Legend</p>
+        <div className="flex items-center space-x-2">
+          <span className="w-3 h-3 rounded-full bg-blue-600 inline-block border border-white animate-pulse"></span>
+          <span className="font-semibold text-blue-300">You Are Here (GPS)</span>
+        </div>
         <div className="flex items-center space-x-2">
           <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block border border-white"></span>
           <span>Available Ambulance</span>

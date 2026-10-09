@@ -45,6 +45,11 @@ export const DashboardPage: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Automatically acquire live GPS location on mount
+  useEffect(() => {
+    handleUseLiveLocation();
+  }, []);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 5000);
