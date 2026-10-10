@@ -107,6 +107,10 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                 BLE 5.2 Mesh Active
               </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-950/60 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                <span>Node: {typeof navigator !== 'undefined' && /Win/.test(navigator.userAgent) ? 'Windows Laptop (LAPTOP-S3I4F6CE)' : 'Laptop Node'}</span>
+              </span>
             </div>
             <p className="text-[11px] text-slate-400">
               Zero-Internet P2P device beaconing • Direct radio hopping between victim & responder nodes

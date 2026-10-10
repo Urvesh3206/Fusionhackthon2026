@@ -114,20 +114,30 @@ export const TopNavigation: React.FC = () => {
         </div>
 
         {/* Center: Clean Connection Status & Offline BIN Toggle */}
-        <button
-          onClick={() => setOfflineNetworkCrash(!isOfflineNetworkCrash)}
-          title="Click to toggle between Online (Cloudflare) and Offline Zero-Internet (BIN Beacon Mesh) mode"
-          className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition ${
-            isOfflineNetworkCrash 
-              ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 animate-pulse' 
-              : 'bg-slate-100 dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
-          }`}
-        >
-          <span className={`w-2.5 h-2.5 rounded-full ${isOfflineNetworkCrash ? 'bg-amber-400' : 'bg-emerald-500'}`}></span>
-          <span>
-            {isOfflineNetworkCrash ? '⚡ Offline BIN Beacon Mesh Active (0-Internet)' : '🟢 System Online • Cloudflare Active'}
-          </span>
-        </button>
+        {/* Center: Real-Time Device Name & Network Indicator */}
+        <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/20 text-emerald-300 text-xs font-semibold shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="font-mono text-[11px]">
+              💻 {typeof navigator !== 'undefined' && /Win/.test(navigator.userAgent) ? 'Windows Laptop' : 'Laptop Node'} ({typeof window !== 'undefined' ? window.location.hostname : '10.92.61.96'}:5173)
+            </span>
+          </div>
+
+          <button
+            onClick={() => setOfflineNetworkCrash(!isOfflineNetworkCrash)}
+            title="Click to toggle between Online and Offline Zero-Internet mode"
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition ${
+              isOfflineNetworkCrash 
+                ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 animate-pulse' 
+                : 'bg-slate-100 dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+            }`}
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${isOfflineNetworkCrash ? 'bg-amber-400' : 'bg-emerald-500'}`}></span>
+            <span>
+              {isOfflineNetworkCrash ? '⚡ Offline BIN Mesh Active' : '🟢 Network Live'}
+            </span>
+          </button>
+        </div>
 
         {/* Right: Quick Search, Refresh, Notifications, SOS, Profile */}
         <div className="flex items-center space-x-2 md:space-x-3">
