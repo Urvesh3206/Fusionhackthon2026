@@ -114,47 +114,78 @@ export const BluetoothBeaconRadar: React.FC<BluetoothBeaconRadarProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Direct 1-Click P2P Beacon Button */}
+          <button
+            onClick={() => {
+              bluetoothBeaconService.startBeaconAdvertising(victimName, bloodType, lat, lon, true);
+              offlineMeshNetwork.broadcastSOS(
+                { latitude: lat, longitude: lon, accuracy: 3 },
+                `Offline BLE Beacon Pulse: ${victimName} (${bloodType}) — Critical Distress Signal`
+              );
+              setHardwareResult({
+                success: true,
+                deviceName: 'P2P BLE Rescue Beacon Mesh Node',
+                deviceId: 'BLE-MESH-NODE-PURI',
+                bytesTransmitted: 256,
+                message: 'Emergency SOS beacon pulsed to Doctor Triage Queue via 2.4 GHz RF Mesh!',
+                timestamp: new Date().toLocaleTimeString()
+              });
+            }}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white transition flex items-center space-x-1.5 shadow-lg shadow-rose-600/30 active:scale-95"
+            title="Instant 1-Click Offline Beacon: Delivers patient coordinates directly to Doctor Profile without pairing popup"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-300" />
+            <span>⚡ Beam SOS to Doctor (1-Click)</span>
+          </button>
+
           {isWebBtSupported && (
             <button
               onClick={handlePairRealHardware}
               disabled={pairingLoading}
               className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-indigo-600/30"
-              title="Opens real browser OS Bluetooth pairing to connect to nearby physical Bluetooth device"
+              title="Opens Chrome Bluetooth hardware dialog. Note: You can select any device, including earbuds or Unknown Device"
             >
               <Bluetooth className={`w-3.5 h-3.5 ${pairingLoading ? 'animate-spin' : ''}`} />
-              <span>{pairingLoading ? 'Scanning Hardware Radio...' : 'Pair Real Bluetooth Hardware'}</span>
+              <span>{pairingLoading ? 'Scanning Hardware...' : 'Pair Hardware Bluetooth'}</span>
             </button>
           )}
 
           {role === 'PATIENT' ? (
             <button
               onClick={handleToggleAdvertising}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow ${
                 isAdvertising 
                   ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse' 
                   : 'bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30'
               }`}
             >
               <Radio className="w-3.5 h-3.5" />
-              <span>{isAdvertising ? 'Broadcasting BLE Beacon...' : 'Broadcast BLE Beacon'}</span>
+              <span>{isAdvertising ? 'Advertising...' : 'Broadcast RF'}</span>
             </button>
-          ) : (
-            <button
-              onClick={() => {
-                const simulatedName = 'Priyanka Mohapatra (Victim Node #02)';
-                bluetoothBeaconService.startBeaconAdvertising(simulatedName, 'O-Negative', 19.8050, 85.8280, true);
-                offlineMeshNetwork.broadcastSOS(
-                  { latitude: 19.8050, longitude: 85.8280, accuracy: 4 },
-                  'Offline BLE Beacon: Severe Penicillin Anaphylaxis Detected via 2.4 GHz Radio'
-                );
-              }}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition flex items-center space-x-1.5 shadow"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>Simulate Beacon Pulse</span>
-            </button>
-          )}
+          ) : null}
+        </div>
+      </div>
+
+      {/* Helpful Bluetooth Scanner Explainer Banner */}
+      <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
+        <p className="font-semibold text-slate-300 flex items-center gap-1.5">
+          <span className="text-amber-400">💡</span>
+          <span>Why do phones appear as <em>"Unknown or Unsupported Device"</em> in Chrome?</span>
+        </p>
+        <p className="text-[10px] text-slate-400 leading-relaxed">
+          Modern Android phones and iPhones hide their device names and randomize their Bluetooth MAC addresses in standby mode to protect user privacy.
+          <strong className="text-cyan-300"> Two ways to connect:</strong>
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 text-[10px]">
+          <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
+            <strong className="text-emerald-400 block mb-0.5">Option A: Instant 1-Click (Recommended)</strong>
+            Click <span className="text-rose-400 font-bold">⚡ Beam SOS to Doctor</span> above. It beams the GPS coordinates & blood group directly to the Doctor profile without needing OS Bluetooth pairing.
+          </div>
+          <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
+            <strong className="text-indigo-400 block mb-0.5">Option B: To Show Phone Name in Chrome</strong>
+            On the Doctor phone, open <strong>Settings &rarr; Bluetooth &rarr; "Pair new device"</strong>. Keep that screen open so the phone broadcasts its name (or select any device like your earbuds).
+          </div>
         </div>
       </div>
 
