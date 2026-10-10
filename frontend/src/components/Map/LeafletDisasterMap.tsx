@@ -6,6 +6,7 @@ import {
   Shield, AlertTriangle, Hospital as HospitalIcon, 
   Navigation, Truck, CheckCircle, Flame, Droplets, MapPin, Send, Crosshair
 } from 'lucide-react';
+import { getRealGPSPosition, watchRealGPS } from '../../services/offlineGPS';
 
 // Google Maps Style SVG Icons
 function createHospitalIcon(isDerated: boolean = false) {
@@ -277,20 +278,28 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
     closures: true,
   });
 
-  // Auto-acquire live location on mount if not already supplied
+  // Auto-acquire live location on mount using multi-tier GPS + IP fallback
   useEffect(() => {
-    if (!clickedPoint && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-          setInternalGpsLocation(coords);
-          if (onMapClick) onMapClick(coords[0], coords[1]);
-        },
-        () => {},
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    }
-  }, [clickedPoint, onMapClick]);
+    let watchId: number | null = null;
+    
+    getRealGPSPosition(10000).then((pos) => {
+      const coords: [number, number] = [pos.latitude, pos.longitude];
+      setInternalGpsLocation(coords);
+      if (onMapClick) onMapClick(coords[0], coords[1]);
+    }).catch(() => {});
+
+    // Watch position continuously
+    watchId = watchRealGPS((pos) => {
+      const coords: [number, number] = [pos.latitude, pos.longitude];
+      setInternalGpsLocation(coords);
+    });
+
+    return () => {
+      if (watchId !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [onMapClick]);
 
   const activeUserLocation = clickedPoint || internalGpsLocation;
 
@@ -682,30 +691,63 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
             </Marker>
           );
         })}
+        {/* 9. Live User Real-Life GPS Location Marker */}
+        {activeUserLocation && !isNaN(activeUserLocation[0]) && !isNaN(activeUserLocation[1]) && (
+          <>
+            <Circle
+              center={activeUserLocation}
+              radius={80}
+              pathOptions={{
+                color: '#2563eb',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.25,
+                weight: 2
+              }}
+            />
+            <Marker
+              position={activeUserLocation}
+              icon={customClickIcon}
+              zIndexOffset={1000}
+            >
+              <Popup>
+                <div className="p-1.5 text-xs min-w-[210px] text-slate-800">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-600 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping"></span>
+                    <span>Your Real-Time Location (Live GPS)</span>
+                  </div>
+                  <p className="font-mono text-[11px] text-slate-700 bg-slate-100 p-1.5 rounded border border-slate-200">
+                    {activeUserLocation[0].toFixed(5)}° N, {activeUserLocation[1].toFixed(5)}° E
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    📍 High-accuracy GNSS sensor lock active • Emergency triage paired
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          </>
+        )}
       </MapContainer>
 
       {/* Floating 1-Click "My Location" Button on the Map */}
       <button
-        onClick={() => {
+        onClick={async () => {
           setIsLocatingSelf(true);
-          if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-                setInternalGpsLocation(coords);
-                if (onMapClick) onMapClick(coords[0], coords[1]);
-                setIsLocatingSelf(false);
-              },
-              () => setIsLocatingSelf(false),
-              { enableHighAccuracy: true, timeout: 8000 }
-            );
+          try {
+            const pos = await getRealGPSPosition(10000);
+            const coords: [number, number] = [pos.latitude, pos.longitude];
+            setInternalGpsLocation(coords);
+            if (onMapClick) onMapClick(coords[0], coords[1]);
+          } catch (e) {
+            console.warn('Locate Me error:', e);
+          } finally {
+            setIsLocatingSelf(false);
           }
         }}
-        className="absolute bottom-4 left-4 z-[1000] bg-white text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl border border-blue-200 shadow-xl text-xs font-bold flex items-center space-x-1.5 transition active:scale-95"
+        className="absolute bottom-4 left-4 z-[1000] bg-white text-blue-600 hover:bg-blue-50 px-3.5 py-2 rounded-xl border border-blue-200 shadow-xl text-xs font-bold flex items-center space-x-1.5 transition active:scale-95"
         title="Center map on your live GPS position"
       >
         <Crosshair className={`w-4 h-4 text-blue-600 ${isLocatingSelf ? 'animate-spin' : ''}`} />
-        <span>📍 Locate Me</span>
+        <span>📍 Center My Location</span>
       </button>
 
       {/* Map Legend Overlay in Bottom Right */}

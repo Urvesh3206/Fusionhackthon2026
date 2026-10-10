@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { calculateRoute, assignIncident } from '../services/api';
 import { fetchLiveNearbyHospitals, generateNearbyAmbulances, calculateDistanceKm } from '../services/liveFacilities';
+import { getRealGPSPosition } from '../services/offlineGPS';
 
 export const DisasterMapPage: React.FC = () => {
   const { state, setState, isOfflineNetworkCrash, setOfflineNetworkCrash } = useEmergencyStore();
@@ -49,84 +50,68 @@ export const DisasterMapPage: React.FC = () => {
   }, [ambulances, hospitals, selectedAmbId, selectedHospId]);
 
   // Handle Browser Live GPS Geolocation with Real-Time Hospital Feed
-  const handleUseLiveLocation = () => {
+  const handleUseLiveLocation = async () => {
     setIsLocating(true);
     setLocationStatusMessage('Acquiring high-accuracy GNSS fix from sensor array...');
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          setUserLiveLocation([lat, lon]);
-          setLocationStatusMessage(`GNSS Locked: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E (±${Math.round(position.coords.accuracy || 4)}m) — Live Mesh Facilities Synced`);
+    
+    try {
+      const position = await getRealGPSPosition(10000);
+      const lat = position.latitude;
+      const lon = position.longitude;
+      setUserLiveLocation([lat, lon]);
+      setLocationStatusMessage(`GNSS Locked: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E (±${Math.round(position.accuracy_m || 5)}m) — Live Facilities Synced`);
 
-          try {
-            // Fetch real live hospitals around user's GPS coordinates
-            const liveHosps = await fetchLiveNearbyHospitals(lat, lon);
-            const liveAmbs = generateNearbyAmbulances(lat, lon);
+      // Fetch real live hospitals around user's GPS coordinates
+      const liveHosps = await fetchLiveNearbyHospitals(lat, lon);
+      const liveAmbs = generateNearbyAmbulances(lat, lon);
 
-            if (state) {
-              setState({
-                ...state,
-                hospitals: liveHosps,
-                ambulances: liveAmbs
-              });
-            }
+      if (state) {
+        setState({
+          ...state,
+          hospitals: liveHosps,
+          ambulances: liveAmbs
+        });
+      }
 
-            // Auto-select the nearest available ambulance
-            const sortedAmbs = [...liveAmbs].sort((a, b) => {
-              const distA = calculateDistanceKm(lat, lon, a.location[1], a.location[0]);
-              const distB = calculateDistanceKm(lat, lon, b.location[1], b.location[0]);
-              return distA - distB;
-            });
-            const nearestAvail = sortedAmbs.find(a => a.status === 'Available') || sortedAmbs[0];
-            if (nearestAvail) setSelectedAmbId(nearestAvail.id);
+      // Auto-select the nearest available ambulance
+      const sortedAmbs = [...liveAmbs].sort((a, b) => {
+        const distA = calculateDistanceKm(lat, lon, a.location[1], a.location[0]);
+        const distB = calculateDistanceKm(lat, lon, b.location[1], b.location[0]);
+        return distA - distB;
+      });
+      const nearestAvail = sortedAmbs.find(a => a.status === 'Available') || sortedAmbs[0];
+      if (nearestAvail) setSelectedAmbId(nearestAvail.id);
 
-            // Auto-select the nearest hospital with beds
-            const sortedHosps = [...liveHosps].sort((a, b) => {
-              const distA = calculateDistanceKm(lat, lon, a.location[1], a.location[0]);
-              const distB = calculateDistanceKm(lat, lon, b.location[1], b.location[0]);
-              return distA - distB;
-            });
-            if (sortedHosps[0]) setSelectedHospId(sortedHosps[0].id);
+      // Auto-select the nearest hospital with beds
+      const sortedHosps = [...liveHosps].sort((a, b) => {
+        const distA = calculateDistanceKm(lat, lon, a.location[1], a.location[0]);
+        const distB = calculateDistanceKm(lat, lon, b.location[1], b.location[0]);
+        return distA - distB;
+      });
+      if (sortedHosps[0]) setSelectedHospId(sortedHosps[0].id);
 
-            // Calculate shortest route from nearest ambulance to user's live location
-            const originLoc = nearestAvail ? nearestAvail.location : undefined;
-            handleCalculateShortestRoute(originLoc, [lon, lat]);
-          } catch (err) {
-            console.error('Error updating live facilities:', err);
-          } finally {
-            setIsLocating(false);
-          }
-        },
-        async (error) => {
-          console.warn('Geolocation access error, showing demo sector coordinates:', error);
-          const fallbackLat = 19.8050;
-          const fallbackLon = 85.8280;
-          setUserLiveLocation([fallbackLat, fallbackLon]);
-          
-          const liveHosps = await fetchLiveNearbyHospitals(fallbackLat, fallbackLon);
-          const liveAmbs = generateNearbyAmbulances(fallbackLat, fallbackLon);
-          if (state) {
-            setState({
-              ...state,
-              hospitals: liveHosps,
-              ambulances: liveAmbs
-            });
-          }
-          setIsLocating(false);
-          setLocationStatusMessage('Displaying Tactical Operational Sector (19.8050°N, 85.8280°E) — Offline Map Mode');
-          handleCalculateShortestRoute(liveAmbs[0]?.location, [fallbackLon, fallbackLat]);
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
-    } else {
+      // Calculate shortest route from nearest ambulance to user's live location
+      const originLoc = nearestAvail ? nearestAvail.location : undefined;
+      handleCalculateShortestRoute(originLoc, [lon, lat]);
+    } catch (error) {
+      console.warn('Geolocation fallback to demo sector:', error);
       const fallbackLat = 19.8050;
       const fallbackLon = 85.8280;
       setUserLiveLocation([fallbackLat, fallbackLon]);
+      
+      const liveHosps = await fetchLiveNearbyHospitals(fallbackLat, fallbackLon);
+      const liveAmbs = generateNearbyAmbulances(fallbackLat, fallbackLon);
+      if (state) {
+        setState({
+          ...state,
+          hospitals: liveHosps,
+          ambulances: liveAmbs
+        });
+      }
+      setLocationStatusMessage('Displaying Tactical Operational Sector (19.8050°N, 85.8280°E) — Offline Map Mode');
+      handleCalculateShortestRoute(liveAmbs[0]?.location, [fallbackLon, fallbackLat]);
+    } finally {
       setIsLocating(false);
-      setLocationStatusMessage('Geolocation not supported — Displaying Tactical Grid Sector');
-      handleCalculateShortestRoute(ambulances[0]?.location, [fallbackLon, fallbackLat]);
     }
   };
 

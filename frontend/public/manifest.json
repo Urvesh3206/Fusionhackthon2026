@@ -1,26 +1,54 @@
 {
-  "name": "ResQGrid AI — Emergency Response Network",
+  "id": "/",
+  "name": "ResQGrid AI Emergency Response Network",
   "short_name": "ResQGrid",
-  "description": "Offline-First Emergency Response, BLE Beacon Mesh & Dispatch System",
+  "description": "Offline-First Emergency Response, BLE Beacon Mesh & Hazard Intelligence System",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#020617",
-  "theme_color": "#e11d48",
+  "theme_color": "#0f172a",
   "orientation": "any",
+  "lang": "en-US",
   "categories": ["medical", "utilities", "navigation"],
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icon.svg",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Broadcast Radio SOS",
+      "short_name": "SOS Beacon",
+      "url": "/radio-sos",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Live Disaster Map",
+      "short_name": "Disaster Map",
+      "url": "/map",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

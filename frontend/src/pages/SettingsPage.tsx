@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Sliders, Shield, Save, CheckCircle2, RotateCcw } from 'lucide-react';
+import { 
+  Settings, Sliders, Shield, Save, CheckCircle2, RotateCcw, 
+  Smartphone, Vibrate, MapPin, Eye, Bell, Volume2, HardDrive, Download 
+} from 'lucide-react';
 import { fetchSettings, updateSettings } from '../services/api';
 import { SystemSettings } from '../types';
+import { useEmergencyStore } from '../stores/useEmergencyStore';
+import { deviceServices } from '../services/deviceServices';
 
 export const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -174,6 +179,61 @@ export const SettingsPage: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* Device Hardware & PWA Controls Section */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <Smartphone className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-200">Device Hardware & Native PWA Integration</h3>
+              <p className="text-[11px] text-slate-400">Manage hardware sensors, screen keep-awake, haptics & offline cache</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => useEmergencyStore.getState().setShowDeviceServicesModal(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md transition flex items-center gap-1.5"
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Launch Device Hub</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-1">
+            <div className="flex items-center gap-2 text-slate-300 font-semibold">
+              <HardDrive className="w-4 h-4 text-cyan-400" />
+              <span>Offline Service Worker</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Pre-caches map tiles, hazard assets and emergency outbox for 100% disconnected use.
+            </p>
+          </div>
+
+          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-1">
+            <div className="flex items-center gap-2 text-slate-300 font-semibold">
+              <Vibrate className="w-4 h-4 text-purple-400" />
+              <span>Tactile Haptics & Siren</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Morse Code SOS vibration patterns and dual-tone synthesized rescue acoustic beacon.
+            </p>
+          </div>
+
+          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-1">
+            <div className="flex items-center gap-2 text-slate-300 font-semibold">
+              <Eye className="w-4 h-4 text-amber-400" />
+              <span>Screen Wake Lock</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Keeps device display illuminated during active search, rescue, and ambulance routing.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

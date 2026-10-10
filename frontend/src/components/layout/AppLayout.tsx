@@ -8,10 +8,16 @@ import { fetchCurrentState, runOptimizationReplan } from '../../services/api';
 import { initWebSocket } from '../../services/websocket';
 
 import { LiveToastAlert } from './LiveToastAlert';
+import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
+import { SWUpdateBanner } from '../pwa/SWUpdateBanner';
+import { DeviceServicesHub } from '../pwa/DeviceServicesHub';
 
 export const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { setState, setPlan, setConnected, uiThemeMode, currentUser } = useEmergencyStore();
+  const { 
+    setState, setPlan, setConnected, uiThemeMode, currentUser,
+    showDeviceServicesModal, setShowDeviceServicesModal 
+  } = useEmergencyStore();
   const location = useLocation();
 
   const isFriendly = uiThemeMode === 'user-friendly';
@@ -81,6 +87,18 @@ export const AppLayout: React.FC = () => {
 
       {/* Real-Time Live Toast Notification Popup */}
       <LiveToastAlert />
+
+      {/* PWA Floating Install Prompt & iOS Guide */}
+      <PWAInstallBanner />
+
+      {/* Service Worker Update Toast */}
+      <SWUpdateBanner />
+
+      {/* Device Hardware & PWA Services Hub Modal */}
+      <DeviceServicesHub 
+        isOpen={showDeviceServicesModal} 
+        onClose={() => setShowDeviceServicesModal(false)} 
+      />
     </div>
   );
 };

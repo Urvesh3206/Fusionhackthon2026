@@ -95,6 +95,7 @@ interface EmergencyStore {
   showLogModal: boolean;
   showAssumptionsModal: boolean;
   showNotificationsDrawer: boolean;
+  showDeviceServicesModal: boolean;
   globalSearchQuery: string;
   isOfflineNetworkCrash: boolean;
   uiThemeMode: 'user-friendly' | 'tactical';
@@ -123,6 +124,7 @@ interface EmergencyStore {
   setShowLogModal: (show: boolean) => void;
   setShowAssumptionsModal: (show: boolean) => void;
   setShowNotificationsDrawer: (show: boolean) => void;
+  setShowDeviceServicesModal: (show: boolean) => void;
   setGlobalSearchQuery: (query: string) => void;
   setOfflineNetworkCrash: (crashed: boolean) => void;
   addRadioBeacon: (beacon: RadioSOSBeacon) => void;
@@ -229,6 +231,7 @@ export const useEmergencyStore = create<EmergencyStore>((set) => ({
   showLogModal: false,
   showAssumptionsModal: false,
   showNotificationsDrawer: false,
+  showDeviceServicesModal: false,
   globalSearchQuery: '',
   isOfflineNetworkCrash: false,
   uiThemeMode: 'user-friendly',
@@ -264,6 +267,7 @@ export const useEmergencyStore = create<EmergencyStore>((set) => ({
   setShowLogModal: (showLogModal) => set({ showLogModal }),
   setShowAssumptionsModal: (showAssumptionsModal) => set({ showAssumptionsModal }),
   setShowNotificationsDrawer: (showNotificationsDrawer) => set({ showNotificationsDrawer }),
+  setShowDeviceServicesModal: (showDeviceServicesModal) => set({ showDeviceServicesModal }),
   setGlobalSearchQuery: (globalSearchQuery) => set({ globalSearchQuery }),
   setOfflineNetworkCrash: (isOfflineNetworkCrash) => set({ isOfflineNetworkCrash }),
   addRadioBeacon: (beacon) => set((s) => {

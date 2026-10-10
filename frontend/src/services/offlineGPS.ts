@@ -75,8 +75,21 @@ export function getRealGPSPosition(options: GPSAcquireOptions | number = 15000):
         cacheGPSPosition(gpsResult);
         resolve(gpsResult);
       },
-      (err) => {
-        console.warn('[ResQGrid GPS] Real GPS acquisition failed:', err.message);
+      async (err) => {
+        console.warn('[ResQGrid GPS] Real GPS acquisition failed, attempting IP fallback:', err.message);
+        try {
+          const ipLoc = await getIPFallbackLocation();
+          if (ipLoc) {
+            resolve(ipLoc);
+            return;
+          }
+        } catch {}
+
+        const cached = getCachedGPS();
+        if (cached) {
+          resolve(cached);
+          return;
+        }
         reject(err);
       },
       {
@@ -86,6 +99,55 @@ export function getRealGPSPosition(options: GPSAcquireOptions | number = 15000):
       }
     );
   });
+}
+
+/**
+ * IP-based geolocation fallback when browser GPS permission is disabled or running in insecure context.
+ */
+export async function getIPFallbackLocation(): Promise<RealGPSPosition | null> {
+  try {
+    const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+        const pos: RealGPSPosition = {
+          latitude: data.latitude,
+          longitude: data.longitude,
+          accuracy_m: 1000,
+          altitude_m: null,
+          heading_deg: null,
+          speed_mps: null,
+          timestamp: Date.now(),
+          source: 'MANUAL_FALLBACK'
+        };
+        cacheGPSPosition(pos);
+        return pos;
+      }
+    }
+  } catch {
+    // Secondary fallback
+    try {
+      const res2 = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(4000) });
+      if (res2.ok) {
+        const data2 = await res2.json();
+        if (data2 && data2.success && typeof data2.latitude === 'number') {
+          const pos2: RealGPSPosition = {
+            latitude: data2.latitude,
+            longitude: data2.longitude,
+            accuracy_m: 1000,
+            altitude_m: null,
+            heading_deg: null,
+            speed_mps: null,
+            timestamp: Date.now(),
+            source: 'MANUAL_FALLBACK'
+          };
+          cacheGPSPosition(pos2);
+          return pos2;
+        }
+      }
+    } catch {}
+  }
+  return null;
 }
 
 /**

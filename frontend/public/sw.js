@@ -1,61 +1,96 @@
 // ResQGrid AI — Progressive Web App (PWA) Offline Service Worker
-// Enables 100% Zero-Network operation when Wi-Fi and Cellular towers shut down
+// Enables 100% Zero-Network operation with Background Sync, Push Notifications, and Map Tile Caching
 
-const CACHE_NAME = 'resqgrid-offline-v3';
-const TILE_CACHE = 'resqgrid-map-tiles-v2';
+const CACHE_VERSION = 'resqgrid-offline-v4';
+const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
+const TILE_CACHE = `${CACHE_VERSION}-tiles`;
+const API_CACHE = `${CACHE_VERSION}-api`;
 
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png',
+  '/favicon.png',
+  '/icon.svg',
   '/radio-sos',
   '/profile',
+  '/map',
+  '/comms',
+  '/hazards',
+  '/incidents',
+  '/dispatch',
+  '/fleet',
+  '/hospitals',
+  '/resources',
+  '/evacuation',
+  '/simulation',
+  '/analytics',
+  '/alerts',
+  '/settings',
+  '/audit-logs',
+  '/login',
   '/login/citizen',
-  '/login/doctor'
+  '/login/doctor',
+  '/login/admin'
 ];
 
+// Install: Cache critical App Shell
 self.addEventListener('install', (event) => {
-  console.log('[ResQGrid SW] Installing offline PWA cache...');
+  console.log('[ResQGrid SW] Installing offline PWA cache version:', CACHE_VERSION);
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(APP_SHELL_CACHE).then((cache) => {
       return cache.addAll(APP_SHELL).catch((err) => {
-        console.warn('[ResQGrid SW] Pre-cache initial notice:', err);
+        console.warn('[ResQGrid SW] Pre-cache partial notice:', err);
       });
     })
   );
   self.skipWaiting();
 });
 
+// Activate: Delete old caches
 self.addEventListener('activate', (event) => {
-  console.log('[ResQGrid SW] Service worker activated for offline operation');
+  console.log('[ResQGrid SW] Activated. Cleaning old caches...');
+  const currentCaches = [APP_SHELL_CACHE, TILE_CACHE, API_CACHE];
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME && key !== TILE_CACHE)
-          .map((key) => caches.delete(key))
+          .filter((key) => !currentCaches.includes(key))
+          .map((key) => {
+            console.log('[ResQGrid SW] Deleting obsolete cache:', key);
+            return caches.delete(key);
+          })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
+// Fetch: Smart Strategy per request type
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const request = event.request;
+  const url = new URL(request.url);
 
-  // 1. Navigation requests (HTML SPA Routing) — return cached app shell if offline
-  if (event.request.mode === 'navigate') {
+  // Ignore non-GET requests for fetch caching (sync handles outbox)
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // 1. Navigation requests (HTML SPA Routing) — Network first, fallback to cached /index.html
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(request)
         .then((response) => {
           if (response.ok) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            caches.open(APP_SHELL_CACHE).then((cache) => cache.put(request, clone));
           }
           return response;
         })
         .catch(async () => {
-          const cachedPage = await caches.match(event.request);
+          const cachedPage = await caches.match(request);
           if (cachedPage) return cachedPage;
           const appShell = await caches.match('/index.html');
           if (appShell) return appShell;
@@ -65,61 +100,172 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Map tiles caching
-  if (url.hostname.includes('tile') || url.hostname.includes('basemaps') || url.hostname.includes('openstreetmap')) {
+  // 2. Map tiles caching — Cache First, Network fallback
+  if (
+    url.hostname.includes('tile') || 
+    url.hostname.includes('basemaps') || 
+    url.hostname.includes('openstreetmap') ||
+    url.hostname.includes('cartocdn') ||
+    url.pathname.includes('/tiles/')
+  ) {
     event.respondWith(
-      caches.open(TILE_CACHE).then((cache) => {
-        return cache.match(event.request).then((cached) => {
-          if (cached) return cached;
-          return fetch(event.request)
-            .then((response) => {
-              if (response.ok) cache.put(event.request, response.clone());
-              return response;
-            })
-            .catch(() => new Response('', { status: 200, headers: { 'Content-Type': 'image/png' } }));
-        });
+      caches.open(TILE_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        try {
+          const response = await fetch(request);
+          if (response.ok) {
+            cache.put(request, response.clone());
+          }
+          return response;
+        } catch {
+          // Transparent 1x1 fallback or empty tile
+          return new Response('', { status: 200, headers: { 'Content-Type': 'image/png' } });
+        }
       })
     );
     return;
   }
 
-  // 3. API endpoints — cache with offline JSON fallback
+  // 3. API endpoints — Network First with Stale-While-Revalidate and JSON fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(event.request)
+      fetch(request)
         .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(API_CACHE).then((cache) => cache.put(request, clone));
+          }
           return response;
         })
         .catch(async () => {
-          const cached = await caches.match(event.request);
+          const cached = await caches.match(request);
           if (cached) return cached;
-          return new Response(JSON.stringify({ 
-            offline: true, 
-            status: 'OFFLINE_MESH_ACTIVE',
-            message: 'Operating in 100% Zero-Network BIN Beacon mode.' 
-          }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return new Response(
+            JSON.stringify({
+              offline: true,
+              status: 'OFFLINE_MESH_ACTIVE',
+              timestamp: new Date().toISOString(),
+              message: 'Device operating in 100% Zero-Network BLE/Radio Beacon Mode.'
+            }),
+            {
+              headers: { 'Content-Type': 'application/json' }
+            }
+          );
         })
     );
     return;
   }
 
-  // 4. Static assets (JS, CSS, fonts, images) — Cache First, then Network
+  // 4. Static assets (JS, CSS, Fonts, Images) — Stale-While-Revalidate
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+    caches.match(request).then((cached) => {
+      const fetchPromise = fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(APP_SHELL_CACHE).then((cache) => cache.put(request, clone));
           }
-          return response;
+          return networkResponse;
         })
-        .catch(() => cached || new Response('', { status: 404 }));
+        .catch(() => cached);
+
+      return cached || fetchPromise;
     })
   );
+});
+
+// Background Sync: Trigger outbox synchronization when device reconnects to network
+self.addEventListener('sync', (event) => {
+  console.log('[ResQGrid SW] Background sync event triggered tag:', event.tag);
+  if (event.tag === 'sync-emergency-outbox' || event.tag === 'resqgrid-sync') {
+    event.waitUntil(
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'TRIGGER_BACKGROUND_SYNC',
+            timestamp: Date.now()
+          });
+        });
+      })
+    );
+  }
+});
+
+// Push Notifications: Display native system alerts
+self.addEventListener('push', (event) => {
+  console.log('[ResQGrid SW] Push event received');
+  let data = {
+    title: 'ResQGrid Emergency Notification',
+    body: 'Urgent humanitarian dispatch or hazard alert received.',
+    icon: '/icon.svg',
+    badge: '/icon.svg',
+    tag: 'resqgrid-alert',
+    data: { url: '/alerts' }
+  };
+
+  if (event.data) {
+    try {
+      const json = event.data.json();
+      data = { ...data, ...json };
+    } catch {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/icon.svg',
+    badge: data.badge || '/icon.svg',
+    vibrate: [200, 100, 200, 300, 400],
+    data: data.data || { url: '/' },
+    actions: [
+      { action: 'open_map', title: '📍 View on Map' },
+      { action: 'ack', title: '✓ Acknowledge' }
+    ],
+    requireInteraction: true
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Notification Click: Focus existing client or open new window
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          if (client.url.includes(targetUrl)) {
+            return client.focus();
+          }
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+
+// Message Listener: Support instant update & custom actions
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    caches.keys().then((keys) => {
+      return Promise.all(keys.map((k) => caches.delete(k)));
+    }).then(() => {
+      if (event.source) {
+        event.source.postMessage({ type: 'CACHE_CLEARED' });
+      }
+    });
+  }
 });

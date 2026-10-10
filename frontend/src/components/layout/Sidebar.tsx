@@ -5,9 +5,10 @@ import {
   Truck, Hospital, Package, Users, PlaySquare, 
   BarChart3, Bell, Settings, FileText, ChevronDown,
   ChevronLeft, ChevronRight, ShieldAlert, User, Radio, Signal,
-  Sparkles, Layers
+  Sparkles, Layers, Smartphone
 } from 'lucide-react';
 import { useEmergencyStore } from '../../stores/useEmergencyStore';
+import { PWAInstallButton } from '../common/PWAInstallButton';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -15,7 +16,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
-  const { state, currentUser, uiThemeMode } = useEmergencyStore();
+  const { state, currentUser, uiThemeMode, setShowDeviceServicesModal } = useEmergencyStore();
   const [showMoreTools, setShowMoreTools] = useState(false);
 
   const isFriendly = uiThemeMode === 'user-friendly';
@@ -194,6 +195,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
             )}
           </div>
         )}
+      </div>
+
+      {/* PWA & Device Services Controls */}
+      <div className={`px-2.5 py-2 border-t ${
+        isFriendly ? 'border-slate-200/80 bg-slate-50/70' : 'border-surface-container-high/80 bg-surface-container-lowest'
+      } space-y-1.5`}>
+        {!collapsed && (
+          <PWAInstallButton variant="sidebar" onOpenDeviceHub={() => setShowDeviceServicesModal(true)} />
+        )}
+        
+        <button
+          onClick={() => setShowDeviceServicesModal(true)}
+          className={`w-full flex items-center ${collapsed ? 'justify-center p-2' : 'justify-between px-3 py-2'} rounded-xl text-xs font-semibold transition ${
+            isFriendly 
+              ? 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-sm' 
+              : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-surface-container-high'
+          }`}
+          title="Open Device Hardware & PWA Services Hub"
+        >
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-4 h-4 text-cyan-500" />
+            {!collapsed && <span>Device & Hardware</span>}
+          </div>
+          {!collapsed && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
+              Sensors
+            </span>
+          )}
+        </button>
       </div>
 
       {/* User Profile Section at Bottom */}

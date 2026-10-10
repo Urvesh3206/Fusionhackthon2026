@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Bell, Search, Radio, RefreshCw, Shield, User,
   AlertTriangle, CheckCircle, ChevronDown, LogOut,
-  Wifi, MessageSquare, Satellite, ShieldAlert
+  Wifi, MessageSquare, Satellite, ShieldAlert, Smartphone
 } from 'lucide-react';
 import { useEmergencyStore, DEMO_USER_PROFILES } from '../../stores/useEmergencyStore';
 import { UserRole } from '../../types';
@@ -17,6 +17,7 @@ export const TopNavigation: React.FC = () => {
   const { 
     state, currentUser, switchRole, 
     isConnected, showNotificationsDrawer, setShowNotificationsDrawer,
+    showDeviceServicesModal, setShowDeviceServicesModal,
     globalSearchQuery, setGlobalSearchQuery, isOfflineNetworkCrash, setOfflineNetworkCrash,
     uiThemeMode, setUiThemeMode
   } = useEmergencyStore();
@@ -152,7 +153,16 @@ export const TopNavigation: React.FC = () => {
           </button>
 
           {/* Download & Install PWA App */}
-          <PWAInstallButton />
+          <PWAInstallButton onOpenDeviceHub={() => setShowDeviceServicesModal(true)} />
+
+          {/* Device & Hardware Services Hub */}
+          <button
+            onClick={() => setShowDeviceServicesModal(true)}
+            title="Open Device Hardware & PWA Services Hub (GPS, Haptics, Battery, Wake Lock, Siren)"
+            className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-cyan-600 transition"
+          >
+            <Smartphone className="w-4 h-4" />
+          </button>
 
           {/* Refresh Button */}
           <button
