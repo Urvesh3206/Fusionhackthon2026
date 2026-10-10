@@ -81,10 +81,15 @@ class BluetoothBeaconService {
     }
 
     try {
+      // ResQGrid Standard Emergency BLE Service & Characteristic UUIDs
+      const RESQGRID_SERVICE_UUID = '0000fef0-0000-1000-8000-00805f9b34fb';
+      const RESQGRID_WRITE_CHAR_UUID = '0000fef1-0000-1000-8000-00805f9b34fb';
+
       // 1. Trigger native browser OS Bluetooth hardware scanning dialog
       const device = await (navigator as any).bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [
+          RESQGRID_SERVICE_UUID,
           'generic_access',
           'battery_service',
           'device_information',
@@ -101,6 +106,27 @@ class BluetoothBeaconService {
         if (device.gatt) {
           gattServer = await device.gatt.connect();
           this.activeGattServer = gattServer;
+
+          // Attempt to write payload directly to Doctor's Writable Characteristic if available
+          try {
+            const service = await gattServer.getPrimaryService(RESQGRID_SERVICE_UUID);
+            const characteristic = await service.getCharacteristic(RESQGRID_WRITE_CHAR_UUID);
+            if (characteristic) {
+              const payloadBytes = new TextEncoder().encode(JSON.stringify({
+                header: 'RESQGRID_BLE_SOS_v2',
+                name: sosPayload.patientName,
+                blood: sosPayload.bloodType,
+                gps: [sosPayload.lat, sosPayload.lon],
+                triage: 'CRITICAL_RED',
+                reason: sosPayload.triageReason,
+                time: Date.now()
+              }));
+              await characteristic.writeValue(payloadBytes);
+              console.log('[Web Bluetooth] Successfully wrote SOS payload to Doctor Peripheral Characteristic!');
+            }
+          } catch (writeErr) {
+            console.log('[Web Bluetooth] Standard GATT pairing established:', writeErr);
+          }
         }
       } catch (gattErr) {
         console.warn('[Web Bluetooth] GATT direct connect notification:', gattErr);
