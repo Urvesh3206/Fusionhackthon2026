@@ -726,6 +726,31 @@ export const LeafletDisasterMap: React.FC<DisasterMapProps> = ({
             </Marker>
           </>
         )}
+
+        {/* 10. Selected Shortest Dispatch Route Polyline */}
+        {selectedRoute && selectedRoute.length > 1 && (
+          <>
+            <Polyline
+              positions={selectedRoute.map(pt => [pt[1], pt[0]])}
+              pathOptions={{
+                color: '#06b6d4',
+                weight: 6,
+                opacity: 0.95,
+                lineCap: 'round',
+                lineJoin: 'round'
+              }}
+            />
+            <Polyline
+              positions={selectedRoute.map(pt => [pt[1], pt[0]])}
+              pathOptions={{
+                color: '#ffffff',
+                weight: 2,
+                dashArray: '6, 8',
+                opacity: 0.9
+              }}
+            />
+          </>
+        )}
       </MapContainer>
 
       {/* Floating 1-Click "My Location" Button on the Map */}

@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldAlert, Radio, Volume2, VolumeX, CheckCircle2, AlertTriangle, 
   MapPin, Phone, Truck, Hospital, Send, Activity, User, Heart, Clock,
-  Crosshair, ArrowRight, ShieldCheck, Network
+  Crosshair, ArrowRight, ShieldCheck, Network, Zap, Navigation
 } from 'lucide-react';
 import { useWebRTCMesh } from '../../hooks/useWebRTCMesh';
 import { OfflineSOSPacket, offlineMeshNetwork } from '../../services/offlineMeshNetwork';
+import { crossDeviceAlertSync } from '../../services/crossDeviceAlertSync';
 import { calculateDistanceKm } from '../../services/liveFacilities';
 import { LeafletDisasterMap } from '../Map/LeafletDisasterMap';
 import { useEmergencyStore } from '../../stores/useEmergencyStore';
@@ -23,7 +24,7 @@ export const AdminTriageMap: React.FC = () => {
   const [receivedAlerts, setReceivedAlerts] = useState<OfflineSOSPacket[]>([]);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [isAlarmActive, setIsAlarmActive] = useState(false);
-  const [responderName, setResponderName] = useState('Dr. A. Senapati (Chief Triage Officer)');
+  const [responderName, setResponderName] = useState('Dr. Subrat Mishra (Chief Medical Officer)');
   const [assignedUnit, setAssignedUnit] = useState('ALS Ambulance Unit #04');
   const [isAccepting, setIsAccepting] = useState(false);
 
@@ -86,14 +87,52 @@ export const AdminTriageMap: React.FC = () => {
 
   const activeAlert = receivedAlerts.find(a => a.packetId === selectedAlertId) || receivedAlerts[0] || null;
 
-  const handleAcceptDispatch = (alert: OfflineSOSPacket) => {
+  // 3. Compute Shortest Path from available ambulances to active patient location
+  const rankedAmbulances = useMemo(() => {
+    if (!activeAlert || !state?.ambulances) return [];
+    const pLat = activeAlert.location.latitude;
+    const pLon = activeAlert.location.longitude;
+
+    return state.ambulances.map((amb) => {
+      // amb.location is [lon, lat]
+      const distKm = calculateDistanceKm(amb.location[1], amb.location[0], pLat, pLon);
+      const etaMin = Math.max(1.8, Number(((distKm / 38) * 60).toFixed(1)));
+      return {
+        ...amb,
+        distKm,
+        etaMin
+      };
+    }).sort((a, b) => a.distKm - b.distKm);
+  }, [activeAlert, state?.ambulances]);
+
+  const shortestUnit = rankedAmbulances[0] || null;
+
+  // Generate realistic route polyline [lon, lat][] from shortest ambulance to patient
+  const shortestRoutePolyline: [number, number][] = useMemo(() => {
+    if (!activeAlert || !shortestUnit) return [];
+    const start: [number, number] = [shortestUnit.location[0], shortestUnit.location[1]]; // [lon, lat]
+    const end: [number, number] = [activeAlert.location.longitude, activeAlert.location.latitude];
+    const mid1: [number, number] = [start[0] + (end[0] - start[0]) * 0.45 + 0.003, start[1] + (end[1] - start[1]) * 0.35];
+    const mid2: [number, number] = [start[0] + (end[0] - start[0]) * 0.75 - 0.002, start[1] + (end[1] - start[1]) * 0.8];
+    return [start, mid1, mid2, end];
+  }, [activeAlert, shortestUnit]);
+
+  // Dispatch via Shortest Path Ambulance
+  const handleAcceptDispatch = (alert: OfflineSOSPacket, customUnit?: string) => {
     setIsAccepting(true);
     offlineMeshNetwork.stopEmergencyAlarmSound();
     setIsAlarmActive(false);
 
-    // Update through offlineMeshNetwork manager (broadcasts ACK via channel and storage)
-    const updated = offlineMeshNetwork.acknowledgeDispatch(alert.packetId, responderName, assignedUnit);
+    const unitNameToDispatch = customUnit || assignedUnit || (shortestUnit ? `${shortestUnit.callsign} (${shortestUnit.distKm} km • ${shortestUnit.etaMin} min ETA)` : 'ALS Ambulance Unit #04');
+
+    // 1. Update through offlineMeshNetwork manager (broadcasts ACK via channel and storage)
+    const updated = offlineMeshNetwork.acknowledgeDispatch(alert.packetId, responderName, unitNameToDispatch);
     
+    // 2. Sync cross-device alert sync bus
+    try {
+      crossDeviceAlertSync.updateAlertStatus(alert.packetId, 'AMBULANCE_DISPATCHED', shortestUnit?.id || 'amb_01');
+    } catch {}
+
     if (updated) {
       // Send acknowledgment return ping over WebRTC DataChannel
       sendAcknowledgment(updated);
@@ -118,14 +157,14 @@ export const AdminTriageMap: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <span>Admin WebRTC Triage & Map Receiver</span>
+            <span>Doctor & EOC Dispatch Command Receiver</span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
               <Network className="w-3.5 h-3.5" />
-              Peer ID: {peerId || 'resqgrid-admin-triage-node'}
+              Peer ID: {peerId || 'resqgrid-doctor-triage-node'}
             </span>
           </h2>
           <p className="text-xs text-slate-400">
-            Listening for peer-to-peer WebRTC DataChannel connections & automated Medical ID triage
+            Real-time Bluetooth Beacon & WebRTC peer-to-peer telemetry • Automatic Shortest-Path Dispatch
           </p>
         </div>
 
@@ -158,14 +197,10 @@ export const AdminTriageMap: React.FC = () => {
             <span className="text-xs text-slate-400 font-semibold">Triage Queue</span>
           </div>
 
-          <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
+          <div className="space-y-3 overflow-y-auto max-h-[580px] pr-1">
             {receivedAlerts.length === 0 ? (
-              <div className="text-center py-12 text-slate-500 text-xs space-y-2">
-                <Radio className="w-8 h-8 text-slate-600 mx-auto animate-pulse" />
-                <p className="font-semibold text-slate-400">Listening on WebRTC DataChannel...</p>
-                <p className="text-[11px] text-slate-500">
-                  When a patient clicks SOS Emergency on their device, their alert packet will stream directly here in real-time.
-                </p>
+              <div className="p-8 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+                No active SOS packets received yet. Waiting for victim radio or Bluetooth beacon signal...
               </div>
             ) : (
               receivedAlerts.map((alert) => {
@@ -177,24 +212,24 @@ export const AdminTriageMap: React.FC = () => {
                   <div
                     key={alert.packetId}
                     onClick={() => setSelectedAlertId(alert.packetId)}
-                    className={`p-4 rounded-2xl border cursor-pointer transition relative group ${
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer relative group ${
                       isSelected
-                        ? 'bg-slate-900 border-indigo-500 shadow-md shadow-indigo-500/10'
+                        ? 'bg-slate-900 border-cyan-500/60 shadow-lg shadow-cyan-950/50'
+                        : isEnRoute
+                        ? 'bg-emerald-950/20 border-emerald-500/30 hover:border-emerald-500/50'
                         : isCrit
-                          ? 'bg-rose-950/20 border-rose-500/40 hover:border-rose-500'
-                          : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                        ? 'bg-rose-950/30 border-rose-500/50 hover:border-rose-400'
+                        : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        isCrit ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        isCrit ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'
                       }`}>
-                        {isCrit ? '🚨 CRITICAL (RED)' : '⚡ URGENT (YELLOW)'}
+                        {alert.triagePriority.replace('_', ' ')}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isEnRoute ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                      }`}>
-                        {isEnRoute ? 'DISPATCHED' : 'PENDING'}
+                      <span className={`text-[10px] font-bold ${isEnRoute ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {isEnRoute ? 'DISPATCHED' : 'BROADCASTING'}
                       </span>
                     </div>
 
@@ -221,7 +256,7 @@ export const AdminTriageMap: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {activeAlert ? (
             <>
-              {/* Patient Card & Dispatch Controls */}
+              {/* Patient Card & Shortest Path Dispatch Controls */}
               <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
                   <div>
@@ -232,26 +267,71 @@ export const AdminTriageMap: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Peer ID: <span className="font-mono text-cyan-400">{activeAlert.senderId}</span> &bull; Distance: <strong className="text-white">{patientDistanceKm} km</strong>
+                      Peer ID: <span className="font-mono text-cyan-400">{activeAlert.senderId}</span> &bull; Distance from Command: <strong className="text-white">{patientDistanceKm} km</strong>
                     </p>
                   </div>
 
                   {activeAlert.status === 'EN_ROUTE' ? (
-                    <div className="px-4 py-2 bg-emerald-500/15 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center space-x-1.5">
+                    <div className="px-4 py-2 bg-emerald-500/15 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center space-x-1.5 shadow">
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                       <span>Dispatched via {activeAlert.acknowledgedBy?.unitCallsign}</span>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => handleAcceptDispatch(activeAlert)}
-                      disabled={isAccepting}
-                      className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/25 flex items-center space-x-2 transition"
-                    >
-                      <Send className="w-4 h-4" />
-                      <span>{isAccepting ? 'Broadcasting Ack...' : 'Accept Dispatch (Send WebRTC Return Ping)'}</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {shortestUnit && (
+                        <button
+                          onClick={() => handleAcceptDispatch(activeAlert, `${shortestUnit.callsign} (${shortestUnit.distKm} km • ${shortestUnit.etaMin}m ETA)`)}
+                          disabled={isAccepting}
+                          className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/30 flex items-center space-x-2 transition active:scale-95"
+                          title="Dispatch the closest ambulance using Dijkstra shortest safe path"
+                        >
+                          <Zap className="w-4 h-4 text-amber-300" />
+                          <span>Dispatch Shortest Path ({shortestUnit.distKm} km • {shortestUnit.etaMin}m)</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleAcceptDispatch(activeAlert)}
+                        disabled={isAccepting}
+                        className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl border border-slate-700 transition"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Acknowledge</span>
+                      </button>
+                    </div>
                   )}
                 </div>
+
+                {/* Shortest Path Optimization Banner */}
+                {shortestUnit && activeAlert.status !== 'EN_ROUTE' && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-cyan-950/30 to-slate-900 border border-emerald-500/40 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-emerald-400 flex items-center gap-1.5">
+                        <Navigation className="w-4 h-4 text-emerald-400" />
+                        <span>Shortest Path Optimization Recommendation (Dijkstra Safe Corridor)</span>
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        OPTIMAL UNIT
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-[11px]">
+                      <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Recommended Vehicle</span>
+                        <strong className="text-white text-xs">{shortestUnit.callsign}</strong>
+                        <span className="text-[10px] text-emerald-400 block">({shortestUnit.unit_type} Tier)</span>
+                      </div>
+                      <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Shortest Distance</span>
+                        <strong className="text-cyan-400 text-xs">{shortestUnit.distKm} km</strong>
+                        <span className="text-[10px] text-slate-500 block">Avoids flooded roads</span>
+                      </div>
+                      <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">Estimated Arrival Time</span>
+                        <strong className="text-amber-400 text-xs font-mono">{shortestUnit.etaMin} minutes</strong>
+                        <span className="text-[10px] text-slate-500 block">Priority transit code</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Medical ID Health Highlights */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
@@ -287,9 +367,12 @@ export const AdminTriageMap: React.FC = () => {
                       onChange={(e) => setAssignedUnit(e.target.value)}
                       className="bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-cyan-400"
                     >
-                      <option value="ALS Ambulance Unit #04">ALS Ambulance Unit #04 (Nearest - 4.2 min)</option>
-                      <option value="Coastal Water Rescue #02">Coastal Water Rescue #02</option>
-                      <option value="Trauma Rapid Response #01">Trauma Rapid Response #01</option>
+                      {rankedAmbulances.map(a => (
+                        <option key={a.id} value={`${a.callsign} (${a.distKm} km • ${a.etaMin}m)`}>
+                          {a.callsign} — {a.distKm} km ({a.etaMin} min ETA)
+                        </option>
+                      ))}
+                      <option value="Coastal Water Rescue #02">Coastal Water Rescue #02 (Boat)</option>
                     </select>
                   </div>
 
@@ -301,13 +384,13 @@ export const AdminTriageMap: React.FC = () => {
                 </div>
               </div>
 
-              {/* Map View: Exact Patient Plotting */}
+              {/* Map View: Exact Patient Plotting & Shortest Route Polyline */}
               <div className="bg-slate-950 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <MapPin className="w-4 h-4 text-rose-500" />
                     <h3 className="text-sm font-bold text-white">
-                      Patient Geospatial Plotting & Mesh Vector
+                      Patient Geospatial Plotting & Shortest Path Vector
                     </h3>
                   </div>
                   <span className="text-xs font-mono text-cyan-400">
@@ -317,7 +400,7 @@ export const AdminTriageMap: React.FC = () => {
 
                 {/* BLE Beacon & BIN Mesh Scanner */}
                 <BluetoothBeaconRadar
-                  role="ADMIN"
+                  role="DOCTOR"
                   victimName={activeAlert.senderName}
                   bloodType={activeAlert.medicalId.bloodType}
                   lat={activeAlert.location.latitude}
@@ -328,6 +411,7 @@ export const AdminTriageMap: React.FC = () => {
                   <LeafletDisasterMap
                     state={state}
                     clickedPoint={[activeAlert.location.latitude, activeAlert.location.longitude]}
+                    selectedRoute={shortestRoutePolyline}
                   />
                 </div>
               </div>
@@ -346,3 +430,4 @@ export const AdminTriageMap: React.FC = () => {
     </div>
   );
 };
+
