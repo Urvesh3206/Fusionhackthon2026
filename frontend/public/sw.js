@@ -1,7 +1,7 @@
 // ResQGrid AI — Progressive Web App (PWA) Offline Service Worker
 // Enables 100% Zero-Network operation with Background Sync, Push Notifications, and Map Tile Caching
 
-const CACHE_VERSION = 'resqgrid-offline-v4';
+const CACHE_VERSION = 'resqgrid-offline-v5';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const TILE_CACHE = `${CACHE_VERSION}-tiles`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -76,6 +76,19 @@ self.addEventListener('fetch', (event) => {
   // Ignore non-GET requests for fetch caching (sync handles outbox)
   if (request.method !== 'GET') {
     return;
+  }
+
+  // Bypass Vite dev server internal assets, HMR, and source modules to prevent blank screen errors
+  if (
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/node_modules/') ||
+    url.pathname.includes('.vite') ||
+    url.searchParams.has('t') ||
+    url.pathname.endsWith('.tsx') ||
+    url.pathname.endsWith('.ts')
+  ) {
+    return; // Pass through directly to network
   }
 
   // 1. Navigation requests (HTML SPA Routing) — Network first, fallback to cached /index.html
